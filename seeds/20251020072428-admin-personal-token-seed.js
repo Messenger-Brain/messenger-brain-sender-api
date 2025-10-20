@@ -1,8 +1,9 @@
 'use strict';
 
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 
-/** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
     // Generate a secure random token
@@ -24,7 +25,7 @@ module.exports = {
     );
 
     if (tokenTypes.length === 0) {
-      throw new Error('Token type "personal_token" not found. Please run seeds first.');
+      throw new Error('Token type "personal_token" not found. Please run previous seeds first.');
     }
 
     const tokenTypeId = tokenTypes[0].id;
@@ -35,7 +36,7 @@ module.exports = {
     );
 
     if (users.length === 0) {
-      throw new Error('Admin user not found. Please run seeds first.');
+      throw new Error('Admin user not found. Please run admin user seed first.');
     }
 
     const userId = users[0].id;
@@ -52,11 +53,9 @@ module.exports = {
     ]);
 
     // Save token to a file for reference
-    const fs = require('fs');
-    const path = require('path');
     const tokenFile = path.join(__dirname, '..', 'ADMIN_TOKEN.txt');
     
-    fs.writeFileSync(tokenFile, `# Admin Personal Access Token
+    const tokenContent = `# Admin Personal Access Token
 # Generated: ${new Date().toISOString()}
 # User: admin@messengerbrain.com
 # 
@@ -67,8 +66,9 @@ module.exports = {
 # In production, generate new tokens through the API.
 
 ${token}
-`);
+`;
 
+    fs.writeFileSync(tokenFile, tokenContent);
     console.log(`📄 Token saved to: ADMIN_TOKEN.txt\n`);
   },
 
@@ -106,8 +106,6 @@ ${token}
     console.log('✅ Admin personal token deleted');
 
     // Delete the token file
-    const fs = require('fs');
-    const path = require('path');
     const tokenFile = path.join(__dirname, '..', 'ADMIN_TOKEN.txt');
     
     if (fs.existsSync(tokenFile)) {

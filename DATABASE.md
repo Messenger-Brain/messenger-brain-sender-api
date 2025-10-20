@@ -208,7 +208,7 @@ expired
 
 Table messages
 id int identity, primary key
-remoteJid nvachar not null 
+remote_jid nvachar not null 
 whatsapp_session_id FK whatsapp_session id
 message_session_status_id FK message_session_status id
 updated_at Timestamp not null
@@ -239,7 +239,7 @@ updated_at date not null
 created_at date not null
 
 
-Table system_errors
+Tablesystem_errors
 id int identity, primary key
 log nvarchar
 updated_at date not null

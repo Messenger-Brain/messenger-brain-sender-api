@@ -68,7 +68,7 @@ export class MessageService implements MessageServiceInterface {
 
       // Create message
       const message = await Message.create({
-        remoteJid: messageData.remoteJid,
+        remote_jid: messageData.remoteJid,
         whatsapp_session_id: messageData.whatsappSessionId,
         message_session_status_id: messageData.statusId,
         sent_at: messageData.sentAt || new Date(),
@@ -630,7 +630,7 @@ export class MessageService implements MessageServiceInterface {
 
       const { count, rows } = await Message.findAndCountAll({
         where: {
-          remoteJid: { [Op.like]: `%${searchTerm}%` }
+          remote_jid: { [Op.like]: `%${searchTerm}%` }
         },
         include: [
           {

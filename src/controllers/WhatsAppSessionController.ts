@@ -156,8 +156,16 @@ export class WhatsAppSessionController {
 
       this.logger.info('WhatsApp sessions list request', { filters });
 
-      // TODO: Implement get sessions functionality
-      const result = { success: true, data: { sessions: [], total: 0, totalPages: 0, currentPage: filters.page } };
+      // Get sessions by user (admin can see all, regular users see only their own)
+      const result = await this.sessionService.getSessionsByUser(
+        filters.user_id || userId, 
+        {
+          page: filters.page,
+          limit: filters.limit,
+          sortBy: filters.sortBy,
+          sortOrder: filters.sortOrder as 'ASC' | 'DESC'
+        }
+      );
 
       if (result.success) {
         res.status(200).json(result);

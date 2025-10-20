@@ -4,7 +4,7 @@ import { sequelize } from '../config/sequelize';
 // Message attributes interface
 interface MessageAttributes {
   id: number;
-  remoteJid: string;
+  remote_jid: string;
   whatsapp_session_id: number;
   message_session_status_id: number;
   sent_at: Date;
@@ -21,15 +21,15 @@ interface MessageCreationAttributes extends Optional<MessageAttributes, 'id' | '
 // Message model class
 class Message extends Model<MessageAttributes, MessageCreationAttributes> implements MessageAttributes {
   public id!: number;
-  public remoteJid!: string;
+  public remote_jid!: string;
   public whatsapp_session_id!: number;
   public message_session_status_id!: number;
   public sent_at!: Date;
   public key!: any;
   public message!: any;
   public result?: any;
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+  public readonly created_at!: Date;
+  public readonly updated_at!: Date;
 
   // Associations
   public WhatsAppSession?: any;
@@ -49,7 +49,7 @@ Message.init(
       autoIncrement: true,
       primaryKey: true,
     },
-    remoteJid: {
+    remote_jid: {
       type: DataTypes.STRING(50),
       allowNull: false,
       validate: {

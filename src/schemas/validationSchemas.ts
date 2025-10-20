@@ -58,6 +58,7 @@ export const assignRoleSchema = Joi.object({
 export const createWhatsAppSessionSchema = Joi.object({
   name: Joi.string().min(2).max(200).required(),
   phoneNumber: Joi.string().required(), // Simple validation - just required
+  statusId: Joi.number().integer().min(1).required(),
   accountProtection: Joi.boolean().default(false),
   logMessages: Joi.boolean().default(true),
   webhookUrl: Joi.string().uri().optional(),

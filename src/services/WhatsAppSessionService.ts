@@ -131,13 +131,12 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
         where: { id: sessionId, user_id: user_id },
         include: [
           {
-            model: User
+            model: User,
+            as: 'User'
           },
           {
-            model: WhatsAppSessionStatus
-          },
-          {
-            model: BrowserContext
+            model: WhatsAppSessionStatus,
+            as: 'WhatsAppSessionStatus'
           }
         ]
       });
@@ -741,13 +740,12 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
         where: { user_id },
         include: [
           {
-            model: User
+            model: User,
+            as: 'User'
           },
           {
-            model: WhatsAppSessionStatus
-          },
-          {
-            model: BrowserContext
+            model: WhatsAppSessionStatus,
+            as: 'WhatsAppSessionStatus'
           }
         ],
         limit,

@@ -69,7 +69,7 @@ WhatsAppSessionStatus.init(
   },
   {
     sequelize,
-    tableName: 'whatsapp_sessions_status',
+    tableName: 'whatsapp_session_status',
     timestamps: true,
     underscored: true,
     indexes: [

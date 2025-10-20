@@ -26,7 +26,29 @@ export class MessageController {
    */
   public createMessage = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const result = await this.messageService.createMessage(req.body);
+      const userId = req.user?.id;
+      
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+          error: 'User not authenticated'
+        });
+        return;
+      }
+
+      // Map from API format to internal format
+      const messageData = {
+        whatsappSessionId: req.body.sessionId,
+        remoteJid: req.body.phoneNumber,
+        message: { conversation: req.body.message },
+        statusId: req.body.statusId || 1,
+        sentAt: req.body.sentAt ? new Date(req.body.sentAt) : new Date(),
+        key: { id: `msg_${Date.now()}_${Math.random()}` },
+        userId
+      };
+
+      const result = await this.messageService.createMessage(messageData);
       
       if (result.success) {
         res.status(201).json(result);

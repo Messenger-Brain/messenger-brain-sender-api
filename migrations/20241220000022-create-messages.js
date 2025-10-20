@@ -9,7 +9,7 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      remoteJid: {
+      remote_jid: {
         type: Sequelize.STRING,
         allowNull: false
       },
