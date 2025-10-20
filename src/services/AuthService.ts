@@ -18,13 +18,13 @@ import {
 export interface AuthServiceInterface {
   register(userData: CreateUserRequest): Promise<AuthResponse>;
   login(loginData: LoginRequest): Promise<AuthResponse>;
-  getUserById(userId: number): Promise<User | null>;
-  updateUser(userId: number, userData: UpdateUserRequest): Promise<ApiResponse<User>>;
-  deleteUser(userId: number): Promise<ApiResponse<void>>;
+  getUserById(user_id: number): Promise<User | null>;
+  updateUser(user_id: number, userData: UpdateUserRequest): Promise<ApiResponse<User>>;
+  deleteUser(user_id: number): Promise<ApiResponse<void>>;
   verifyToken(token: string): JWTPayload | null;
   refreshToken(refreshToken: string): Promise<AuthResponse>;
-  logout(userId: number): Promise<ApiResponse<void>>;
-  changePassword(userId: number, currentPassword: string, newPassword: string): Promise<ApiResponse<void>>;
+  logout(user_id: number): Promise<ApiResponse<void>>;
+  changePassword(user_id: number, currentPassword: string, newPassword: string): Promise<ApiResponse<void>>;
   resetPassword(email: string): Promise<ApiResponse<void>>;
   validatePassword(password: string): { isValid: boolean; errors: string[] };
 }
@@ -85,15 +85,15 @@ export class AuthService implements AuthServiceInterface {
         name: userData.name,
         email: userData.email,
         password: hashedPassword,
-        statusId: userData.statusId,
-        freeTrial: userData.freeTrial ?? false
+        status_id: userData.statusId,
+        free_trial: userData.freeTrial ?? false
       });
 
       // Assign role if provided
       if (userData.roleId) {
         await UserRole.create({
-          userId: user.id,
-          roleId: userData.roleId
+          user_id: user.id,
+          role_id: userData.roleId
         });
       }
 
@@ -107,7 +107,7 @@ export class AuthService implements AuthServiceInterface {
       const token = this.generateToken(userWithRelations);
       const refreshToken = this.generateRefreshToken(userWithRelations);
 
-      this.logger.info('User registered successfully', { userId: user.id, email: user.email });
+      this.logger.info('User registered successfully', { user_id: user.id, email: user.email });
 
       return {
         success: true,
@@ -119,7 +119,7 @@ export class AuthService implements AuthServiceInterface {
             email: user.email,
             role: 'user', // Default role
             status: 'active', // Default status
-            freeTrial: user.freeTrial
+            free_trial: user.free_trial
           },
           token,
           refreshToken
@@ -148,11 +148,13 @@ export class AuthService implements AuthServiceInterface {
         where: { email: loginData.email },
         include: [
           {
-            model: UserRole,
-            include: [{ model: Role }]
+            model: Role,
+            as: 'Roles',
+            through: { attributes: [] } // Exclude join table attributes
           },
           {
-            model: UserStatus
+            model: UserStatus,
+            as: 'UserStatus'
           }
         ]
       });
@@ -176,8 +178,9 @@ export class AuthService implements AuthServiceInterface {
       }
 
       // Check user status
-      if (user.statusId !== 1) { // Assuming 1 is active status
-        this.logger.warn('Login failed - user inactive', { email: loginData.email, statusId: user.statusId });
+      const isActive = await this.isUserActive(user);
+      if (!isActive) {
+        this.logger.warn('Login failed - user inactive', { email: loginData.email, status_id: user.status_id });
         return {
           success: false,
           message: 'Account is inactive'
@@ -198,9 +201,9 @@ export class AuthService implements AuthServiceInterface {
             id: user.id,
             name: user.name,
             email: user.email,
-            role: user.UserRoles?.[0]?.Role?.slug || 'user',
+            role: user.Roles?.[0]?.slug || 'user',
             status: user.UserStatus?.slug || 'active',
-            freeTrial: user.freeTrial
+            free_trial: user.free_trial
           },
           token,
           refreshToken
@@ -220,16 +223,18 @@ export class AuthService implements AuthServiceInterface {
   /**
    * Get user by ID with relations
    */
-  public async getUserById(userId: number): Promise<User | null> {
+  public async getUserById(user_id: number): Promise<User | null> {
     try {
-      const user = await User.findByPk(userId, {
+      const user = await User.findByPk(user_id, {
         include: [
           {
-            model: UserRole,
-            include: [{ model: Role }]
+            model: Role,
+            as: 'Roles',
+            through: { attributes: [] }
           },
           {
-            model: UserStatus
+            model: UserStatus,
+            as: 'UserStatus'
           }
         ]
       });
@@ -244,11 +249,11 @@ export class AuthService implements AuthServiceInterface {
   /**
    * Update user
    */
-  public async updateUser(userId: number, userData: UpdateUserRequest): Promise<ApiResponse<User>> {
+  public async updateUser(user_id: number, userData: UpdateUserRequest): Promise<ApiResponse<User>> {
     try {
-      this.logger.info('Starting user update', { userId });
+      this.logger.info('Starting user update', { user_id });
 
-      const user = await User.findByPk(userId);
+      const user = await User.findByPk(user_id);
       if (!user) {
         return {
           success: false,
@@ -274,16 +279,16 @@ export class AuthService implements AuthServiceInterface {
 
       // Update role if provided
       if (userData.roleId) {
-        await UserRole.destroy({ where: { userId } });
-        await UserRole.create({ userId, roleId: userData.roleId });
+        await UserRole.destroy({ where: { user_id } });
+        await UserRole.create({ user_id, role_id: userData.roleId });
       }
 
-      const updatedUser = await this.getUserById(userId);
+      const updatedUser = await this.getUserById(user_id);
       if (!updatedUser) {
         throw new Error('Failed to retrieve updated user');
       }
 
-      this.logger.info('User updated successfully', { userId });
+      this.logger.info('User updated successfully', { user_id });
 
       return {
         success: true,
@@ -304,11 +309,11 @@ export class AuthService implements AuthServiceInterface {
   /**
    * Delete user
    */
-  public async deleteUser(userId: number): Promise<ApiResponse<void>> {
+  public async deleteUser(user_id: number): Promise<ApiResponse<void>> {
     try {
-      this.logger.info('Starting user deletion', { userId });
+      this.logger.info('Starting user deletion', { user_id });
 
-      const user = await User.findByPk(userId);
+      const user = await User.findByPk(user_id);
       if (!user) {
         return {
           success: false,
@@ -317,12 +322,12 @@ export class AuthService implements AuthServiceInterface {
       }
 
       // Delete user roles first
-      await UserRole.destroy({ where: { userId } });
+      await UserRole.destroy({ where: { user_id } });
 
       // Delete user
       await user.destroy();
 
-      this.logger.info('User deleted successfully', { userId });
+      this.logger.info('User deleted successfully', { user_id });
 
       return {
         success: true,
@@ -380,9 +385,9 @@ export class AuthService implements AuthServiceInterface {
             id: user.id,
             name: user.name,
             email: user.email,
-            role: user.UserRoles?.[0]?.Role?.slug || 'user',
+            role: user.Roles?.[0]?.slug || 'user',
             status: user.UserStatus?.slug || 'active',
-            freeTrial: user.freeTrial
+            free_trial: user.free_trial
           },
           token: newToken,
           refreshToken: newRefreshToken
@@ -402,9 +407,9 @@ export class AuthService implements AuthServiceInterface {
   /**
    * Logout user
    */
-  public async logout(userId: number): Promise<ApiResponse<void>> {
+  public async logout(user_id: number): Promise<ApiResponse<void>> {
     try {
-      this.logger.authEvent('logout', userId, true);
+      this.logger.authEvent('logout', user_id, true);
       
       return {
         success: true,
@@ -423,11 +428,11 @@ export class AuthService implements AuthServiceInterface {
   /**
    * Change user password
    */
-  public async changePassword(userId: number, currentPassword: string, newPassword: string): Promise<ApiResponse<void>> {
+  public async changePassword(user_id: number, currentPassword: string, newPassword: string): Promise<ApiResponse<void>> {
     try {
-      this.logger.info('Starting password change', { userId });
+      this.logger.info('Starting password change', { user_id });
 
-      const user = await User.findByPk(userId);
+      const user = await User.findByPk(user_id);
       if (!user) {
         return {
           success: false,
@@ -458,7 +463,7 @@ export class AuthService implements AuthServiceInterface {
       const hashedPassword = await User.hashPassword(newPassword);
       await user.update({ password: hashedPassword });
 
-      this.logger.info('Password changed successfully', { userId });
+      this.logger.info('Password changed successfully', { user_id });
 
       return {
         success: true,
@@ -536,6 +541,32 @@ export class AuthService implements AuthServiceInterface {
   }
 
   /**
+   * Get status ID by slug
+   */
+  private async getStatusIdBySlug(slug: string): Promise<number | null> {
+    try {
+      const status = await UserStatus.findOne({ where: { slug } });
+      return status ? status.id : null;
+    } catch (error) {
+      this.logger.error('Failed to get status ID by slug', error);
+      return null;
+    }
+  }
+
+  /**
+   * Check if user status is active
+   */
+  private async isUserActive(user: User): Promise<boolean> {
+    try {
+      const activeStatusId = await this.getStatusIdBySlug('active');
+      return activeStatusId ? user.status_id === activeStatusId : false;
+    } catch (error) {
+      this.logger.error('Failed to check user status', error);
+      return false;
+    }
+  }
+
+  /**
    * Generate JWT token
    */
   private generateToken(user: User): string {
@@ -543,7 +574,7 @@ export class AuthService implements AuthServiceInterface {
     const payload: JWTPayload = {
       id: user.id,
       email: user.email,
-      role: user.UserRoles?.[0]?.Role?.slug || 'user',
+      role: user.Roles?.[0]?.slug || 'user',
       status: user.UserStatus?.slug || 'active'
     };
 
@@ -558,7 +589,7 @@ export class AuthService implements AuthServiceInterface {
     const payload: JWTPayload = {
       id: user.id,
       email: user.email,
-      role: user.UserRoles?.[0]?.Role?.slug || 'user',
+      role: user.Roles?.[0]?.slug || 'user',
       status: user.UserStatus?.slug || 'active'
     };
 

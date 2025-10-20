@@ -4,20 +4,20 @@ import { sequelize } from '../config/sequelize';
 // UserActivity attributes interface
 interface UserActivityAttributes {
   id: number;
-  userId: number;
+  user_id: number;
   slug: string;
   description: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 // UserActivity creation attributes
-interface UserActivityCreationAttributes extends Optional<UserActivityAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
+interface UserActivityCreationAttributes extends Optional<UserActivityAttributes, 'id' | 'created_at' | 'updated_at'> {}
 
 // UserActivity model class
 class UserActivity extends Model<UserActivityAttributes, UserActivityCreationAttributes> implements UserActivityAttributes {
   public id!: number;
-  public userId!: number;
+  public user_id!: number;
   public slug!: string;
   public description!: string;
   public readonly createdAt!: Date;
@@ -40,7 +40,7 @@ UserActivity.init(
       autoIncrement: true,
       primaryKey: true,
     },
-    userId: {
+    user_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
@@ -65,12 +65,12 @@ UserActivity.init(
         len: [5, 1000],
       },
     },
-    createdAt: {
+    created_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
-    updatedAt: {
+    updated_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
@@ -82,13 +82,13 @@ UserActivity.init(
     timestamps: true,
     indexes: [
       {
-        fields: ['userId'],
+        fields: ['user_id'],
       },
       {
         fields: ['slug'],
       },
       {
-        fields: ['createdAt'],
+        fields: ['created_at'],
       },
     ],
   }

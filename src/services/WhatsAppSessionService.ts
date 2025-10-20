@@ -17,20 +17,20 @@ import {
 
 export interface WhatsAppSessionServiceInterface {
   createSession(sessionData: CreateWhatsAppSessionRequest): Promise<ApiResponse<WhatsAppSession>>;
-  getSessionById(sessionId: number, userId: number): Promise<ApiResponse<WhatsAppSession>>;
-  getUserSessions(userId: number, pagination?: PaginationQuery, filters?: FilterQuery): Promise<PaginatedResponse<WhatsAppSession>>;
-  updateSession(sessionId: number, userId: number, sessionData: UpdateWhatsAppSessionRequest): Promise<ApiResponse<WhatsAppSession>>;
-  deleteSession(sessionId: number, userId: number): Promise<ApiResponse<void>>;
-  getSessionStatus(sessionId: number, userId: number): Promise<ApiResponse<any>>;
-  connectSession(sessionId: number, userId: number): Promise<ApiResponse<void>>;
-  disconnectSession(sessionId: number, userId: number): Promise<ApiResponse<void>>;
-  getSessionMessages(sessionId: number, userId: number, pagination?: PaginationQuery): Promise<PaginatedResponse<Message>>;
-  getSessionStats(sessionId: number, userId: number): Promise<ApiResponse<any>>;
+  getSessionById(sessionId: number, user_id: number): Promise<ApiResponse<WhatsAppSession>>;
+  getUserSessions(user_id: number, pagination?: PaginationQuery, filters?: FilterQuery): Promise<PaginatedResponse<WhatsAppSession>>;
+  updateSession(sessionId: number, user_id: number, sessionData: UpdateWhatsAppSessionRequest): Promise<ApiResponse<WhatsAppSession>>;
+  deleteSession(sessionId: number, user_id: number): Promise<ApiResponse<void>>;
+  getSessionStatus(sessionId: number, user_id: number): Promise<ApiResponse<any>>;
+  connectSession(sessionId: number, user_id: number): Promise<ApiResponse<void>>;
+  disconnectSession(sessionId: number, user_id: number): Promise<ApiResponse<void>>;
+  getSessionMessages(sessionId: number, user_id: number, pagination?: PaginationQuery): Promise<PaginatedResponse<Message>>;
+  getSessionStats(sessionId: number, user_id: number): Promise<ApiResponse<any>>;
   getAllSessions(pagination?: PaginationQuery, filters?: FilterQuery): Promise<PaginatedResponse<WhatsAppSession>>;
   getSessionsByStatus(statusSlug: string, pagination?: PaginationQuery): Promise<PaginatedResponse<WhatsAppSession>>;
-  getSessionsByUser(userId: number, pagination?: PaginationQuery): Promise<PaginatedResponse<WhatsAppSession>>;
-  getSessionCountByUser(userId: number): Promise<ApiResponse<number>>;
-  validateSessionOwnership(sessionId: number, userId: number): Promise<boolean>;
+  getSessionsByUser(user_id: number, pagination?: PaginationQuery): Promise<PaginatedResponse<WhatsAppSession>>;
+  getSessionCountByUser(user_id: number): Promise<ApiResponse<number>>;
+  validateSessionOwnership(sessionId: number, user_id: number): Promise<boolean>;
 }
 
 export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
@@ -55,7 +55,7 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
    */
   public async createSession(sessionData: CreateWhatsAppSessionRequest): Promise<ApiResponse<WhatsAppSession>> {
     try {
-      this.logger.info('Creating WhatsApp session', { userId: sessionData.userId, phoneNumber: sessionData.phoneNumber });
+      this.logger.info('Creating WhatsApp session', { user_id: sessionData.userId, phone_number: sessionData.phoneNumber });
 
       // Validate phone number format
       if (!this.isValidPhoneNumber(sessionData.phoneNumber)) {
@@ -68,8 +68,8 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
       // Check if user already has a session with this phone number
       const existingSession = await WhatsAppSession.findOne({
         where: {
-          userId: sessionData.userId,
-          phoneNumber: sessionData.phoneNumber
+          user_id: sessionData.userId,
+          phone_number: sessionData.phoneNumber
         }
       });
 
@@ -82,13 +82,13 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
 
       // Create session
       const createData: any = {
-        userId: sessionData.userId,
-        phoneNumber: sessionData.phoneNumber,
-        statusId: sessionData.statusId,
-        accountProtection: sessionData.accountProtection,
-        logMessages: sessionData.logMessages,
-        webhookEnabled: sessionData.webhookEnabled,
-        browserContextId: sessionData.browserContextId
+        user_id: sessionData.userId,
+        phone_number: sessionData.phoneNumber,
+        status_id: sessionData.statusId,
+        account_protection: sessionData.accountProtection,
+        log_messages: sessionData.logMessages,
+        webhook_enabled: sessionData.webhookEnabled,
+        browser_context_id: sessionData.browserContextId
       };
 
       if (sessionData.webhookUrl) {
@@ -121,10 +121,10 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
   /**
    * Get session by ID
    */
-  public async getSessionById(sessionId: number, userId: number): Promise<ApiResponse<WhatsAppSession>> {
+  public async getSessionById(sessionId: number, user_id: number): Promise<ApiResponse<WhatsAppSession>> {
     try {
       const session = await WhatsAppSession.findOne({
-        where: { id: sessionId, userId },
+        where: { id: sessionId, user_id: user_id },
         include: [
           {
             model: User
@@ -164,23 +164,23 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
   /**
    * Get user sessions with pagination and filters
    */
-  public async getUserSessions(userId: number, pagination: PaginationQuery = {}, filters: FilterQuery = {}): Promise<PaginatedResponse<WhatsAppSession>> {
+  public async getUserSessions(user_id: number, pagination: PaginationQuery = {}, filters: FilterQuery = {}): Promise<PaginatedResponse<WhatsAppSession>> {
     try {
       const page = pagination.page || 1;
       const limit = pagination.limit || 10;
       const offset = (page - 1) * limit;
-      const sortBy = pagination.sortBy || 'createdAt';
+      const sortBy = pagination.sortBy || 'created_at';
       const sortOrder = pagination.sortOrder || 'DESC';
 
       // Build where clause
-      const whereClause: any = { userId };
+      const whereClause: any = { user_id };
       
       if (filters.search) {
-        whereClause.phoneNumber = { [Op.like]: `%${filters.search}%` };
+        whereClause.phone_number = { [Op.like]: `%${filters.search}%` };
       }
 
       if (filters.status) {
-        whereClause.statusId = await this.getStatusIdBySlug(filters.status);
+        whereClause.status_id = await this.getStatusIdBySlug(filters.status);
       }
 
       // Get sessions with pagination
@@ -236,12 +236,12 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
   /**
    * Update session
    */
-  public async updateSession(sessionId: number, userId: number, sessionData: UpdateWhatsAppSessionRequest): Promise<ApiResponse<WhatsAppSession>> {
+  public async updateSession(sessionId: number, user_id: number, sessionData: UpdateWhatsAppSessionRequest): Promise<ApiResponse<WhatsAppSession>> {
     try {
-      this.logger.info('Updating WhatsApp session', { sessionId, userId });
+      this.logger.info('Updating WhatsApp session', { sessionId, user_id: user_id });
 
       // Validate ownership
-      const ownershipValid = await this.validateSessionOwnership(sessionId, userId);
+      const ownershipValid = await this.validateSessionOwnership(sessionId, user_id);
       if (!ownershipValid) {
         return {
           success: false,
@@ -266,9 +266,17 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
       }
 
       // Update session
-      await session.update(sessionData);
+      await session.update({
+        ...(sessionData.phoneNumber !== undefined && { phone_number: sessionData.phoneNumber }),
+        ...(sessionData.statusId !== undefined && { status_id: sessionData.statusId }),
+        ...(sessionData.accountProtection !== undefined && { account_protection: sessionData.accountProtection }),
+        ...(sessionData.logMessages !== undefined && { log_messages: sessionData.logMessages }),
+        ...(sessionData.webhookUrl !== undefined && { webhook_url: sessionData.webhookUrl }),
+        ...(sessionData.webhookEnabled !== undefined && { webhook_enabled: sessionData.webhookEnabled }),
+        ...(sessionData.browserContextId !== undefined && { browser_context_id: sessionData.browserContextId })
+      });
 
-      const updatedSession = await this.getSessionById(sessionId, userId);
+      const updatedSession = await this.getSessionById(sessionId, user_id);
 
       this.logger.info('WhatsApp session updated successfully', { sessionId });
 
@@ -291,12 +299,12 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
   /**
    * Delete session
    */
-  public async deleteSession(sessionId: number, userId: number): Promise<ApiResponse<void>> {
+  public async deleteSession(sessionId: number, user_id: number): Promise<ApiResponse<void>> {
     try {
-      this.logger.info('Deleting WhatsApp session', { sessionId, userId });
+      this.logger.info('Deleting WhatsApp session', { sessionId, user_id: user_id });
 
       // Validate ownership
-      const ownershipValid = await this.validateSessionOwnership(sessionId, userId);
+      const ownershipValid = await this.validateSessionOwnership(sessionId, user_id);
       if (!ownershipValid) {
         return {
           success: false,
@@ -313,7 +321,7 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
       }
 
       // Delete related messages first
-      await Message.destroy({ where: { whatsappSessionId: sessionId } });
+      await Message.destroy({ where: { whatsapp_session_id: sessionId } });
 
       // Delete session
       await session.destroy();
@@ -338,9 +346,9 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
   /**
    * Get session status
    */
-  public async getSessionStatus(sessionId: number, userId: number): Promise<ApiResponse<any>> {
+  public async getSessionStatus(sessionId: number, user_id: number): Promise<ApiResponse<any>> {
     try {
-      const sessionResponse = await this.getSessionById(sessionId, userId);
+      const sessionResponse = await this.getSessionById(sessionId, user_id);
       if (!sessionResponse.success || !sessionResponse.data) {
         return {
           success: false,
@@ -349,18 +357,18 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
       }
 
       const session = sessionResponse.data;
-      const messageCount = await Message.count({ where: { whatsappSessionId: sessionId } });
+      const messageCount = await Message.count({ where: { whatsapp_session_id: sessionId } });
 
       const status = {
         id: session.id,
-        phoneNumber: session.phoneNumber,
+        phone_number: session.phone_number,
         status: session.WhatsAppSessionStatus?.slug || 'unknown',
-        accountProtection: session.accountProtection,
-        logMessages: session.logMessages,
-        webhookEnabled: session.webhookEnabled,
+        account_protection: session.account_protection,
+        log_messages: session.log_messages,
+        webhook_enabled: session.webhook_enabled,
         messageCount,
-        createdAt: session.createdAt,
-        updatedAt: session.updatedAt
+        created_at: session.createdAt,
+        updated_at: session.updatedAt
       };
 
       return {
@@ -382,12 +390,12 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
   /**
    * Connect session
    */
-  public async connectSession(sessionId: number, userId: number): Promise<ApiResponse<void>> {
+  public async connectSession(sessionId: number, user_id: number): Promise<ApiResponse<void>> {
     try {
-      this.logger.info('Connecting WhatsApp session', { sessionId, userId });
+      this.logger.info('Connecting WhatsApp session', { sessionId, user_id: user_id });
 
       // Validate ownership
-      const ownershipValid = await this.validateSessionOwnership(sessionId, userId);
+      const ownershipValid = await this.validateSessionOwnership(sessionId, user_id);
       if (!ownershipValid) {
         return {
           success: false,
@@ -397,7 +405,7 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
 
       // Update session status to connecting
       await WhatsAppSession.update(
-        { statusId: await this.getStatusIdBySlug('connecting') },
+        { status_id: await this.getStatusIdBySlug('connecting') },
         { where: { id: sessionId } }
       );
 
@@ -427,12 +435,12 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
   /**
    * Disconnect session
    */
-  public async disconnectSession(sessionId: number, userId: number): Promise<ApiResponse<void>> {
+  public async disconnectSession(sessionId: number, user_id: number): Promise<ApiResponse<void>> {
     try {
-      this.logger.info('Disconnecting WhatsApp session', { sessionId, userId });
+      this.logger.info('Disconnecting WhatsApp session', { sessionId, user_id: user_id });
 
       // Validate ownership
-      const ownershipValid = await this.validateSessionOwnership(sessionId, userId);
+      const ownershipValid = await this.validateSessionOwnership(sessionId, user_id);
       if (!ownershipValid) {
         return {
           success: false,
@@ -442,7 +450,7 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
 
       // Update session status to disconnected
       await WhatsAppSession.update(
-        { statusId: await this.getStatusIdBySlug('disconnected') },
+        { status_id: await this.getStatusIdBySlug('disconnected') },
         { where: { id: sessionId } }
       );
 
@@ -472,10 +480,10 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
   /**
    * Get session messages
    */
-  public async getSessionMessages(sessionId: number, userId: number, pagination: PaginationQuery = {}): Promise<PaginatedResponse<Message>> {
+  public async getSessionMessages(sessionId: number, user_id: number, pagination: PaginationQuery = {}): Promise<PaginatedResponse<Message>> {
     try {
       // Validate ownership
-      const ownershipValid = await this.validateSessionOwnership(sessionId, userId);
+      const ownershipValid = await this.validateSessionOwnership(sessionId, user_id);
       if (!ownershipValid) {
         return {
           success: false,
@@ -493,11 +501,11 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
       const page = pagination.page || 1;
       const limit = pagination.limit || 10;
       const offset = (page - 1) * limit;
-      const sortBy = pagination.sortBy || 'sentAt';
+      const sortBy = pagination.sortBy || 'sent_at';
       const sortOrder = pagination.sortOrder || 'DESC';
 
       const { count, rows } = await Message.findAndCountAll({
-        where: { whatsappSessionId: sessionId },
+        where: { whatsapp_session_id: sessionId },
         limit,
         offset,
         order: [[sortBy, sortOrder]]
@@ -537,10 +545,10 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
   /**
    * Get session statistics
    */
-  public async getSessionStats(sessionId: number, userId: number): Promise<ApiResponse<any>> {
+  public async getSessionStats(sessionId: number, user_id: number): Promise<ApiResponse<any>> {
     try {
       // Validate ownership
-      const ownershipValid = await this.validateSessionOwnership(sessionId, userId);
+      const ownershipValid = await this.validateSessionOwnership(sessionId, user_id);
       if (!ownershipValid) {
         return {
           success: false,
@@ -548,11 +556,11 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
         };
       }
 
-      const totalMessages = await Message.count({ where: { whatsappSessionId: sessionId } });
+      const totalMessages = await Message.count({ where: { whatsapp_session_id: sessionId } });
       const messagesToday = await Message.count({
         where: {
-          whatsappSessionId: sessionId,
-          sentAt: {
+          whatsapp_session_id: sessionId,
+          sent_at: {
             [Op.gte]: new Date(new Date().setHours(0, 0, 0, 0))
           }
         }
@@ -562,7 +570,7 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
         sessionId,
         totalMessages,
         messagesToday,
-        createdAt: (await WhatsAppSession.findByPk(sessionId))?.createdAt
+        created_at: (await WhatsAppSession.findByPk(sessionId))?.createdAt
       };
 
       return {
@@ -589,22 +597,22 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
       const page = pagination.page || 1;
       const limit = pagination.limit || 10;
       const offset = (page - 1) * limit;
-      const sortBy = pagination.sortBy || 'createdAt';
+      const sortBy = pagination.sortBy || 'created_at';
       const sortOrder = pagination.sortOrder || 'DESC';
 
       // Build where clause
       const whereClause: any = {};
       
       if (filters.search) {
-        whereClause.phoneNumber = { [Op.like]: `%${filters.search}%` };
+        whereClause.phone_number = { [Op.like]: `%${filters.search}%` };
       }
 
       if (filters.status) {
-        whereClause.statusId = await this.getStatusIdBySlug(filters.status);
+        whereClause.status_id = await this.getStatusIdBySlug(filters.status);
       }
 
       if (filters.userId) {
-        whereClause.userId = filters.userId;
+        whereClause.user_id = filters.userId;
       }
 
       const { count, rows } = await WhatsAppSession.findAndCountAll({
@@ -668,7 +676,7 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
       const statusId = await this.getStatusIdBySlug(statusSlug);
 
       const { count, rows } = await WhatsAppSession.findAndCountAll({
-        where: { statusId },
+        where: { status_id: statusId },
         include: [
           {
             model: User
@@ -682,7 +690,7 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
         ],
         limit,
         offset,
-        order: [['createdAt', 'DESC']]
+        order: [['created_at', 'DESC']]
       });
 
       const totalPages = Math.ceil(count / limit);
@@ -719,14 +727,14 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
   /**
    * Get sessions by user
    */
-  public async getSessionsByUser(userId: number, pagination: PaginationQuery = {}): Promise<PaginatedResponse<WhatsAppSession>> {
+  public async getSessionsByUser(user_id: number, pagination: PaginationQuery = {}): Promise<PaginatedResponse<WhatsAppSession>> {
     try {
       const page = pagination.page || 1;
       const limit = pagination.limit || 10;
       const offset = (page - 1) * limit;
 
       const { count, rows } = await WhatsAppSession.findAndCountAll({
-        where: { userId },
+        where: { user_id },
         include: [
           {
             model: User
@@ -740,7 +748,7 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
         ],
         limit,
         offset,
-        order: [['createdAt', 'DESC']]
+        order: [['created_at', 'DESC']]
       });
 
       const totalPages = Math.ceil(count / limit);
@@ -777,9 +785,9 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
   /**
    * Get session count by user
    */
-  public async getSessionCountByUser(userId: number): Promise<ApiResponse<number>> {
+  public async getSessionCountByUser(user_id: number): Promise<ApiResponse<number>> {
     try {
-      const count = await WhatsAppSession.count({ where: { userId } });
+      const count = await WhatsAppSession.count({ where: { user_id: user_id } });
 
       return {
         success: true,
@@ -800,10 +808,10 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
   /**
    * Validate session ownership
    */
-  public async validateSessionOwnership(sessionId: number, userId: number): Promise<boolean> {
+  public async validateSessionOwnership(sessionId: number, user_id: number): Promise<boolean> {
     try {
       const session = await WhatsAppSession.findOne({
-        where: { id: sessionId, userId }
+        where: { id: sessionId, user_id: user_id }
       });
 
       return !!session;
@@ -816,10 +824,10 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
   /**
    * Validate phone number format
    */
-  private isValidPhoneNumber(phoneNumber: string): boolean {
+  private isValidPhoneNumber(phone_number: string): boolean {
     // Basic phone number validation - can be enhanced
     const phoneRegex = /^\+?[1-9]\d{1,14}$/;
-    return phoneRegex.test(phoneNumber);
+    return phoneRegex.test(phone_number);
   }
 
   /**

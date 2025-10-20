@@ -75,7 +75,7 @@ export class SubscriptionController {
    */
   public getUserSubscriptions = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const userId = parseInt((req.params.userId as string) || '0');
+      const userId = parseInt((req.params.user_id as string) || '0');
       const result = await this.subscriptionService.getUserSubscriptions(userId);
       
       if (result.success) {

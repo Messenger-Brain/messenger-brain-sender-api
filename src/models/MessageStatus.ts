@@ -6,12 +6,12 @@ interface MessageStatusAttributes {
   id: number;
   slug: string;
   description: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 // MessageStatus creation attributes
-interface MessageStatusCreationAttributes extends Optional<MessageStatusAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
+interface MessageStatusCreationAttributes extends Optional<MessageStatusAttributes, 'id' | 'created_at' | 'updated_at'> {}
 
 // MessageStatus model class
 class MessageStatus extends Model<MessageStatusAttributes, MessageStatusCreationAttributes> implements MessageStatusAttributes {
@@ -56,12 +56,12 @@ MessageStatus.init(
         len: [5, 500],
       },
     },
-    createdAt: {
+    created_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
-    updatedAt: {
+    updated_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,

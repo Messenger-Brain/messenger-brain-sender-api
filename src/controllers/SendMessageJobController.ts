@@ -28,8 +28,8 @@ export class SendMessageJobController {
     try {
       const page = parseInt((req.query.page as string) || '1');
       const limit = parseInt((req.query.limit as string) || '10');
-      const statusId = req.query.statusId ? parseInt(req.query.statusId as string) : undefined;
-      const userId = req.query.userId ? parseInt(req.query.userId as string) : undefined;
+      const statusId = req.query.status_id ? parseInt(req.query.status_id as string) : undefined;
+      const userId = req.query.user_id ? parseInt(req.query.user_id as string) : undefined;
       
       const result = await this.jobService.getJobs(page, limit, statusId, userId);
       
@@ -55,7 +55,7 @@ export class SendMessageJobController {
     try {
       const jobData = {
         ...req.body,
-        userId: req.user!.id
+        user_id: req.user!.id
       };
       
       const result = await this.jobService.createJob(jobData);

@@ -5,23 +5,23 @@ import { sequelize } from '../config/sequelize';
 interface TokenAttributes {
   id: number;
   value: string;
-  tokenTypeId: number;
-  userId: number;
-  createdAt?: Date;
-  updatedAt?: Date;
+  token_type_id: number;
+  user_id: number;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 // Token creation attributes
-interface TokenCreationAttributes extends Optional<TokenAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
+interface TokenCreationAttributes extends Optional<TokenAttributes, 'id' | 'created_at' | 'updated_at'> {}
 
 // Token model class
 class Token extends Model<TokenAttributes, TokenCreationAttributes> implements TokenAttributes {
   public id!: number;
   public value!: string;
-  public tokenTypeId!: number;
-  public userId!: number;
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+  public token_type_id!: number;
+  public user_id!: number;
+  public readonly created_at!: Date;
+  public readonly updated_at!: Date;
 
   // Associations
   public User?: any;
@@ -49,7 +49,7 @@ Token.init(
         len: [10, 500],
       },
     },
-    tokenTypeId: {
+    token_type_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
@@ -57,7 +57,7 @@ Token.init(
         key: 'id',
       },
     },
-    userId: {
+    user_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
@@ -65,12 +65,12 @@ Token.init(
         key: 'id',
       },
     },
-    createdAt: {
+    created_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
-    updatedAt: {
+    updated_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
@@ -86,13 +86,13 @@ Token.init(
         fields: ['value'],
       },
       {
-        fields: ['userId'],
+        fields: ['user_id'],
       },
       {
-        fields: ['tokenTypeId'],
+        fields: ['token_type_id'],
       },
       {
-        fields: ['createdAt'],
+        fields: ['created_at'],
       },
     ],
   }

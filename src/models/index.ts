@@ -31,180 +31,180 @@ import SystemError from './SystemError';
 export function setupAssociations(): void {
   // User associations
   User.belongsTo(UserStatus, {
-    foreignKey: 'statusId',
+    foreignKey: 'status_id',
     as: 'UserStatus',
   });
 
   UserStatus.hasMany(User, {
-    foreignKey: 'statusId',
+    foreignKey: 'status_id',
     as: 'Users',
   });
 
   // User-Role associations (Many-to-Many)
   User.belongsToMany(Role, {
     through: UserRole,
-    foreignKey: 'userId',
-    otherKey: 'roleId',
+    foreignKey: 'user_id',
+    otherKey: 'role_id',
     as: 'Roles',
   });
 
   Role.belongsToMany(User, {
     through: UserRole,
-    foreignKey: 'roleId',
-    otherKey: 'userId',
+    foreignKey: 'role_id',
+    otherKey: 'user_id',
     as: 'Users',
   });
 
   UserRole.belongsTo(User, {
-    foreignKey: 'userId',
+    foreignKey: 'user_id',
     as: 'User',
   });
 
   UserRole.belongsTo(Role, {
-    foreignKey: 'roleId',
+    foreignKey: 'role_id',
     as: 'Role',
   });
 
   // UserPreference associations
   UserPreference.belongsTo(User, {
-    foreignKey: 'userId',
+    foreignKey: 'user_id',
     as: 'User',
   });
 
   UserPreference.belongsTo(SystemPreference, {
-    foreignKey: 'systemPreferenceId',
+    foreignKey: 'system_preference_id',
     as: 'SystemPreference',
   });
 
   UserPreference.belongsTo(UserPreferenceStatus, {
-    foreignKey: 'statusId',
+    foreignKey: 'status_id',
     as: 'UserPreferenceStatus',
   });
 
   UserPreference.hasMany(UserPreferenceOption, {
-    foreignKey: 'userPreferenceId',
+    foreignKey: 'user_preferences_id',
     as: 'UserPreferenceOptions',
   });
 
   UserPreferenceOption.belongsTo(UserPreference, {
-    foreignKey: 'userPreferenceId',
+    foreignKey: 'user_preferences_id',
     as: 'UserPreference',
   });
 
   // Token associations
   Token.belongsTo(User, {
-    foreignKey: 'userId',
+    foreignKey: 'user_id',
     as: 'User',
   });
 
   Token.belongsTo(TokenType, {
-    foreignKey: 'tokenTypeId',
+    foreignKey: 'token_type_id',
     as: 'TokenType',
   });
 
   TokenType.hasMany(Token, {
-    foreignKey: 'tokenTypeId',
+    foreignKey: 'token_type_id',
     as: 'Tokens',
   });
 
   // Subscription associations
   Subscription.belongsTo(SubscriptionStatus, {
-    foreignKey: 'statusId',
+    foreignKey: 'subscription_status_id',
     as: 'SubscriptionStatus',
   });
 
   SubscriptionStatus.hasMany(Subscription, {
-    foreignKey: 'statusId',
+    foreignKey: 'subscription_status_id',
     as: 'Subscriptions',
   });
 
   Subscription.hasMany(SubscriptionFeature, {
-    foreignKey: 'subscriptionId',
+    foreignKey: 'subscription_id',
     as: 'SubscriptionFeatures',
   });
 
   SubscriptionFeature.belongsTo(Subscription, {
-    foreignKey: 'subscriptionId',
+    foreignKey: 'subscription_id',
     as: 'Subscription',
   });
 
   // UserSubscription associations
   UserSubscription.belongsTo(User, {
-    foreignKey: 'userId',
+    foreignKey: 'user_id',
     as: 'User',
   });
 
   UserSubscription.belongsTo(Subscription, {
-    foreignKey: 'subscriptionId',
+    foreignKey: 'subscription_id',
     as: 'Subscription',
   });
 
   UserSubscription.belongsTo(UserSubscriptionStatus, {
-    foreignKey: 'statusId',
+    foreignKey: 'status_id',
     as: 'UserSubscriptionStatus',
   });
 
   // UserActivity associations
   UserActivity.belongsTo(User, {
-    foreignKey: 'userId',
+    foreignKey: 'user_id',
     as: 'User',
   });
 
   // WhatsAppSession associations
   WhatsAppSession.belongsTo(User, {
-    foreignKey: 'userId',
+    foreignKey: 'user_id',
     as: 'User',
   });
 
   WhatsAppSession.belongsTo(WhatsAppSessionStatus, {
-    foreignKey: 'statusId',
+    foreignKey: 'status_id',
     as: 'WhatsAppSessionStatus',
   });
 
   WhatsAppSession.belongsTo(BrowserContext, {
-    foreignKey: 'browserContextId',
+    foreignKey: 'browser_context_id',
     as: 'BrowserContext',
   });
 
   BrowserContext.hasMany(WhatsAppSession, {
-    foreignKey: 'browserContextId',
+    foreignKey: 'browser_context_id',
     as: 'WhatsAppSessions',
   });
 
   BrowserContext.belongsTo(BrowserContextStatus, {
-    foreignKey: 'statusId',
+    foreignKey: 'status_id',
     as: 'BrowserContextStatus',
   });
 
   BrowserContextStatus.hasMany(BrowserContext, {
-    foreignKey: 'statusId',
+    foreignKey: 'status_id',
     as: 'BrowserContexts',
   });
 
   // Message associations
   Message.belongsTo(WhatsAppSession, {
-    foreignKey: 'whatsappSessionId',
+    foreignKey: 'whatsapp_session_id',
     as: 'WhatsAppSession',
   });
 
   Message.belongsTo(MessageStatus, {
-    foreignKey: 'statusId',
+    foreignKey: 'message_session_status_id',
     as: 'MessageStatus',
   });
 
   MessageStatus.hasMany(Message, {
-    foreignKey: 'statusId',
+    foreignKey: 'message_session_status_id',
     as: 'Messages',
   });
 
   // SendMessageJob associations
   SendMessageJob.belongsTo(SendMessageJobStatus, {
-    foreignKey: 'statusId',
+    foreignKey: 'send_messages_jobs_status_id',
     as: 'SendMessageJobStatus',
   });
 
   SendMessageJobStatus.hasMany(SendMessageJob, {
-    foreignKey: 'statusId',
+    foreignKey: 'send_messages_jobs_status_id',
     as: 'SendMessageJobs',
   });
 

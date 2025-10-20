@@ -34,25 +34,25 @@ export class WhatsAppSessionController {
    */
   private readonly createSessionSchema = Joi.object({
     name: Joi.string().min(2).max(200).required(),
-    phoneNumber: Joi.string().pattern(/^\+?[1-9]\d{1,14}$/).required(),
+    phone_number: Joi.string().pattern(/^\+?[1-9]\d{1,14}$/).required(),
     countryPrefix: Joi.string().max(10).default('+506'),
-    accountProtection: Joi.boolean().default(true),
-    logMessages: Joi.boolean().default(true),
+    account_protection: Joi.boolean().default(true),
+    log_messages: Joi.boolean().default(true),
     readIncomingMessages: Joi.boolean().default(false),
     autoRejectCalls: Joi.boolean().default(false),
-    webhookUrl: Joi.string().uri().optional(),
-    webhookEnabled: Joi.boolean().default(false),
+    webhook_url: Joi.string().uri().optional(),
+    webhook_enabled: Joi.boolean().default(false),
     webhookEvents: Joi.array().items(Joi.string()).default(['session.status'])
   });
 
   private readonly updateSessionSchema = Joi.object({
     name: Joi.string().min(2).max(200).optional(),
-    accountProtection: Joi.boolean().optional(),
-    logMessages: Joi.boolean().optional(),
+    account_protection: Joi.boolean().optional(),
+    log_messages: Joi.boolean().optional(),
     readIncomingMessages: Joi.boolean().optional(),
     autoRejectCalls: Joi.boolean().optional(),
-    webhookUrl: Joi.string().uri().optional(),
-    webhookEnabled: Joi.boolean().optional(),
+    webhook_url: Joi.string().uri().optional(),
+    webhook_enabled: Joi.boolean().optional(),
     webhookEvents: Joi.array().items(Joi.string()).optional()
   });
 
@@ -60,9 +60,9 @@ export class WhatsAppSessionController {
     page: Joi.number().integer().min(1).default(1),
     limit: Joi.number().integer().min(1).max(100).default(10),
     search: Joi.string().max(100).optional(),
-    statusId: Joi.number().integer().min(1).optional(),
-    userId: Joi.number().integer().min(1).optional(),
-    sortBy: Joi.string().valid('id', 'name', 'phoneNumber', 'createdAt', 'updatedAt').default('createdAt'),
+    status_id: Joi.number().integer().min(1).optional(),
+    user_id: Joi.number().integer().min(1).optional(),
+    sortBy: Joi.string().valid('id', 'name', 'phone_number', 'created_at', 'updated_at').default('created_at'),
     sortOrder: Joi.string().valid('ASC', 'DESC').default('DESC')
   });
 
@@ -101,21 +101,21 @@ export class WhatsAppSessionController {
 
       this.logger.info('WhatsApp session creation attempt', { 
         userId, 
-        phoneNumber: req.body.phoneNumber 
+        phone_number: req.body.phoneNumber 
       });
 
       const result = await this.sessionService.createSession(req.body);
 
       if (result.success) {
         this.loggingMiddleware.logWhatsAppEvent('session_created', result.data?.id || 0, userId, true, {
-          phoneNumber: req.body.phoneNumber,
+          phone_number: req.body.phoneNumber,
           name: req.body.name
         });
         res.status(201).json(result);
       } else {
         this.logger.warn('WhatsApp session creation failed', { 
           userId, 
-          phoneNumber: req.body.phoneNumber, 
+          phone_number: req.body.phoneNumber, 
           error: (result as any).error 
         });
         res.status(400).json(result);
@@ -143,9 +143,9 @@ export class WhatsAppSessionController {
         page: parseInt(req.query.page as string) || 1,
         limit: parseInt(req.query.limit as string) || 10,
         search: req.query.search as string,
-        statusId: req.query.statusId ? parseInt(req.query.statusId as string) : undefined,
-        userId: userRole === 'admin' ? (req.query.userId ? parseInt(req.query.userId as string) : undefined) : userId,
-        sortBy: (req.query.sortBy as string) || 'createdAt',
+        status_id: req.query.status_id ? parseInt(req.query.status_id as string) : undefined,
+        user_id: userRole === 'admin' ? (req.query.user_id ? parseInt(req.query.user_id as string) : undefined) : userId,
+        sortBy: (req.query.sortBy as string) || 'created_at',
         sortOrder: (req.query.sortOrder as string) || 'DESC'
       };
 
@@ -475,7 +475,7 @@ export class WhatsAppSessionController {
    */
   public getUserSessions = async (req: Request, res: Response): Promise<void> => {
     try {
-      const targetUserId = parseInt((req.params.userId as string) || '0');
+      const targetUserId = parseInt((req.params.user_id as string) || '0');
       const currentUserId = (req as any).user?.id;
       const userRole = (req as any).user?.role;
       

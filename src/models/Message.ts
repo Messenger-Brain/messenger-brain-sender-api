@@ -5,26 +5,26 @@ import { sequelize } from '../config/sequelize';
 interface MessageAttributes {
   id: number;
   remoteJid: string;
-  whatsappSessionId: number;
-  statusId: number;
-  sentAt: Date;
+  whatsapp_session_id: number;
+  message_session_status_id: number;
+  sent_at: Date;
   key: any; // JSON data
   message: any; // JSON data
   result?: any; // JSON data
-  createdAt?: Date;
-  updatedAt?: Date;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 // Message creation attributes
-interface MessageCreationAttributes extends Optional<MessageAttributes, 'id' | 'result' | 'createdAt' | 'updatedAt'> {}
+interface MessageCreationAttributes extends Optional<MessageAttributes, 'id' | 'result' | 'created_at' | 'updated_at'> {}
 
 // Message model class
 class Message extends Model<MessageAttributes, MessageCreationAttributes> implements MessageAttributes {
   public id!: number;
   public remoteJid!: string;
-  public whatsappSessionId!: number;
-  public statusId!: number;
-  public sentAt!: Date;
+  public whatsapp_session_id!: number;
+  public message_session_status_id!: number;
+  public sent_at!: Date;
   public key!: any;
   public message!: any;
   public result?: any;
@@ -57,7 +57,7 @@ Message.init(
         len: [10, 50],
       },
     },
-    whatsappSessionId: {
+    whatsapp_session_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
@@ -65,7 +65,7 @@ Message.init(
         key: 'id',
       },
     },
-    statusId: {
+    message_session_status_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
@@ -73,7 +73,7 @@ Message.init(
         key: 'id',
       },
     },
-    sentAt: {
+    sent_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
@@ -90,12 +90,12 @@ Message.init(
       type: DataTypes.JSON,
       allowNull: true,
     },
-    createdAt: {
+    created_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
-    updatedAt: {
+    updated_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
@@ -107,16 +107,16 @@ Message.init(
     timestamps: true,
     indexes: [
       {
-        fields: ['whatsappSessionId'],
+        fields: ['whatsapp_session_id'],
       },
       {
-        fields: ['statusId'],
+        fields: ['message_session_status_id'],
       },
       {
         fields: ['remoteJid'],
       },
       {
-        fields: ['sentAt'],
+        fields: ['sent_at'],
       },
     ],
   }

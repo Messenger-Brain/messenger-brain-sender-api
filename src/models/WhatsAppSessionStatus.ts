@@ -6,12 +6,12 @@ interface WhatsAppSessionStatusAttributes {
   id: number;
   slug: string;
   description: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 // WhatsAppSessionStatus creation attributes
-interface WhatsAppSessionStatusCreationAttributes extends Optional<WhatsAppSessionStatusAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
+interface WhatsAppSessionStatusCreationAttributes extends Optional<WhatsAppSessionStatusAttributes, 'id' | 'created_at' | 'updated_at'> {}
 
 // WhatsAppSessionStatus model class
 class WhatsAppSessionStatus extends Model<WhatsAppSessionStatusAttributes, WhatsAppSessionStatusCreationAttributes> implements WhatsAppSessionStatusAttributes {
@@ -56,12 +56,12 @@ WhatsAppSessionStatus.init(
         len: [5, 500],
       },
     },
-    createdAt: {
+    created_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
-    updatedAt: {
+    updated_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,

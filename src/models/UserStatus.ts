@@ -6,12 +6,12 @@ interface UserStatusAttributes {
   id: number;
   slug: string;
   description: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 // UserStatus creation attributes
-interface UserStatusCreationAttributes extends Optional<UserStatusAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
+interface UserStatusCreationAttributes extends Optional<UserStatusAttributes, 'id' | 'created_at' | 'updated_at'> {}
 
 // UserStatus model class
 class UserStatus extends Model<UserStatusAttributes, UserStatusCreationAttributes> implements UserStatusAttributes {
@@ -56,12 +56,12 @@ UserStatus.init(
         len: [5, 500],
       },
     },
-    createdAt: {
+    created_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
-    updatedAt: {
+    updated_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
@@ -69,7 +69,7 @@ UserStatus.init(
   },
   {
     sequelize,
-    tableName: 'user_statuses',
+    tableName: 'user_status',
     timestamps: true,
     indexes: [
       {

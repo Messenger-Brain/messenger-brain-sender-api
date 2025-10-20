@@ -4,20 +4,20 @@ import { sequelize } from '../config/sequelize';
 // UserPreferenceOption attributes interface
 interface UserPreferenceOptionAttributes {
   id: number;
-  userPreferenceId: number;
+  user_preferences_id: number;
   slug: string;
   value: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 // UserPreferenceOption creation attributes
-interface UserPreferenceOptionCreationAttributes extends Optional<UserPreferenceOptionAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
+interface UserPreferenceOptionCreationAttributes extends Optional<UserPreferenceOptionAttributes, 'id' | 'created_at' | 'updated_at'> {}
 
 // UserPreferenceOption model class
 class UserPreferenceOption extends Model<UserPreferenceOptionAttributes, UserPreferenceOptionCreationAttributes> implements UserPreferenceOptionAttributes {
   public id!: number;
-  public userPreferenceId!: number;
+  public user_preferences_id!: number;
   public slug!: string;
   public value!: string;
   public readonly createdAt!: Date;
@@ -40,7 +40,7 @@ UserPreferenceOption.init(
       autoIncrement: true,
       primaryKey: true,
     },
-    userPreferenceId: {
+    user_preferences_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
@@ -65,12 +65,12 @@ UserPreferenceOption.init(
         len: [1, 100],
       },
     },
-    createdAt: {
+    created_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
-    updatedAt: {
+    updated_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
@@ -83,10 +83,10 @@ UserPreferenceOption.init(
     indexes: [
       {
         unique: true,
-        fields: ['userPreferenceId', 'slug'], // Composite unique index
+        fields: ['user_preferences_id', 'slug'], // Composite unique index
       },
       {
-        fields: ['userPreferenceId'],
+        fields: ['user_preferences_id'],
       },
     ],
   }

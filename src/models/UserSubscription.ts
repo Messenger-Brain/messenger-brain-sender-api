@@ -4,22 +4,22 @@ import { sequelize } from '../config/sequelize';
 // UserSubscription attributes interface
 interface UserSubscriptionAttributes {
   id: number;
-  userId: number;
-  subscriptionId: number;
-  statusId: number;
-  createdAt?: Date;
-  updatedAt?: Date;
+  user_id: number;
+  subscription_id: number;
+  status_id: number;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 // UserSubscription creation attributes
-interface UserSubscriptionCreationAttributes extends Optional<UserSubscriptionAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
+interface UserSubscriptionCreationAttributes extends Optional<UserSubscriptionAttributes, 'id' | 'created_at' | 'updated_at'> {}
 
 // UserSubscription model class
 class UserSubscription extends Model<UserSubscriptionAttributes, UserSubscriptionCreationAttributes> implements UserSubscriptionAttributes {
   public id!: number;
-  public userId!: number;
-  public subscriptionId!: number;
-  public statusId!: number;
+  public user_id!: number;
+  public subscription_id!: number;
+  public status_id!: number;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 
@@ -42,7 +42,7 @@ UserSubscription.init(
       autoIncrement: true,
       primaryKey: true,
     },
-    userId: {
+    user_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
@@ -50,7 +50,7 @@ UserSubscription.init(
         key: 'id',
       },
     },
-    subscriptionId: {
+    subscription_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
@@ -58,7 +58,7 @@ UserSubscription.init(
         key: 'id',
       },
     },
-    statusId: {
+    status_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
@@ -66,12 +66,12 @@ UserSubscription.init(
         key: 'id',
       },
     },
-    createdAt: {
+    created_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
-    updatedAt: {
+    updated_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
@@ -84,16 +84,16 @@ UserSubscription.init(
     indexes: [
       {
         unique: true,
-        fields: ['userId', 'subscriptionId'], // Composite unique index
+        fields: ['user_id', 'subscription_id'], // Composite unique index
       },
       {
-        fields: ['userId'],
+        fields: ['user_id'],
       },
       {
-        fields: ['subscriptionId'],
+        fields: ['subscription_id'],
       },
       {
-        fields: ['statusId'],
+        fields: ['status_id'],
       },
     ],
   }

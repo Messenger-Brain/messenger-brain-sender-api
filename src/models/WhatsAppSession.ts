@@ -4,32 +4,32 @@ import { sequelize } from '../config/sequelize';
 // WhatsAppSession attributes interface
 interface WhatsAppSessionAttributes {
   id: number;
-  userId: number;
-  phoneNumber: string;
-  statusId: number;
-  accountProtection: boolean;
-  logMessages: boolean;
-  webhookUrl?: string;
-  webhookEnabled: boolean;
-  browserContextId?: number;
-  createdAt?: Date;
-  updatedAt?: Date;
+  user_id: number;
+  phone_number: string;
+  status_id: number;
+  account_protection: boolean;
+  log_messages: boolean;
+  webhook_url?: string;
+  webhook_enabled: boolean;
+  browser_context_id?: number;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 // WhatsAppSession creation attributes
-interface WhatsAppSessionCreationAttributes extends Optional<WhatsAppSessionAttributes, 'id' | 'webhookUrl' | 'browserContextId' | 'createdAt' | 'updatedAt'> {}
+interface WhatsAppSessionCreationAttributes extends Optional<WhatsAppSessionAttributes, 'id' | 'webhook_url' | 'browser_context_id' | 'created_at' | 'updated_at'> {}
 
 // WhatsAppSession model class
 class WhatsAppSession extends Model<WhatsAppSessionAttributes, WhatsAppSessionCreationAttributes> implements WhatsAppSessionAttributes {
   public id!: number;
-  public userId!: number;
-  public phoneNumber!: string;
-  public statusId!: number;
-  public accountProtection!: boolean;
-  public logMessages!: boolean;
-  public webhookUrl?: string;
-  public webhookEnabled!: boolean;
-  public browserContextId?: number;
+  public user_id!: number;
+  public phone_number!: string;
+  public status_id!: number;
+  public account_protection!: boolean;
+  public log_messages!: boolean;
+  public webhook_url?: string;
+  public webhook_enabled!: boolean;
+  public browser_context_id?: number;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 
@@ -53,7 +53,7 @@ WhatsAppSession.init(
       autoIncrement: true,
       primaryKey: true,
     },
-    userId: {
+    user_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
@@ -61,7 +61,7 @@ WhatsAppSession.init(
         key: 'id',
       },
     },
-    phoneNumber: {
+    phone_number: {
       type: DataTypes.STRING(20),
       allowNull: false,
       validate: {
@@ -70,37 +70,37 @@ WhatsAppSession.init(
         is: /^\+?[1-9]\d{1,14}$/, // E.164 format
       },
     },
-    statusId: {
+    status_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: 'whatsapp_sessions_status',
+        model: 'whatsapp_session_status',
         key: 'id',
       },
     },
-    accountProtection: {
+    account_protection: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: true,
     },
-    logMessages: {
+    log_messages: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: true,
     },
-    webhookUrl: {
+    webhook_url: {
       type: DataTypes.TEXT,
       allowNull: true,
       validate: {
         isUrl: true,
       },
     },
-    webhookEnabled: {
+    webhook_enabled: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,
     },
-    browserContextId: {
+    browser_context_id: {
       type: DataTypes.INTEGER,
       allowNull: true,
       references: {
@@ -108,12 +108,12 @@ WhatsAppSession.init(
         key: 'id',
       },
     },
-    createdAt: {
+    created_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
-    updatedAt: {
+    updated_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
@@ -126,19 +126,19 @@ WhatsAppSession.init(
     indexes: [
       {
         unique: true,
-        fields: ['userId', 'phoneNumber'], // Composite unique index
+        fields: ['user_id', 'phone_number'], // Composite unique index
       },
       {
-        fields: ['userId'],
+        fields: ['user_id'],
       },
       {
-        fields: ['statusId'],
+        fields: ['status_id'],
       },
       {
-        fields: ['phoneNumber'],
+        fields: ['phone_number'],
       },
       {
-        fields: ['browserContextId'],
+        fields: ['browser_context_id'],
       },
     ],
   }

@@ -39,7 +39,7 @@ export class AuthController {
     name: Joi.string().min(2).max(200).required(),
     email: Joi.string().email().max(100).required(),
     password: Joi.string().min(8).max(200).required(),
-    roleId: Joi.number().integer().min(1).optional()
+    role_id: Joi.number().integer().min(1).optional()
   });
 
   private readonly loginSchema = Joi.object({
@@ -459,7 +459,7 @@ export class AuthController {
           email: user.email,
           role: user.role,
           status: user.status,
-          freeTrial: user.freeTrial
+          free_trial: user.free_trial
         }
       });
     } catch (error) {

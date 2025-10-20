@@ -36,26 +36,26 @@ export class UserController {
     name: Joi.string().min(2).max(200).required(),
     email: Joi.string().email().max(100).required(),
     password: Joi.string().min(8).max(200).required(),
-    roleId: Joi.number().integer().min(1).optional(),
-    statusId: Joi.number().integer().min(1).optional(),
-    freeTrial: Joi.boolean().optional()
+    role_id: Joi.number().integer().min(1).optional(),
+    status_id: Joi.number().integer().min(1).optional(),
+    free_trial: Joi.boolean().optional()
   });
 
   private readonly updateUserSchema = Joi.object({
     name: Joi.string().min(2).max(200).optional(),
     email: Joi.string().email().max(100).optional(),
-    statusId: Joi.number().integer().min(1).optional(),
-    freeTrial: Joi.boolean().optional()
+    status_id: Joi.number().integer().min(1).optional(),
+    free_trial: Joi.boolean().optional()
   });
 
   private readonly getUserListSchema = Joi.object({
     page: Joi.number().integer().min(1).default(1),
     limit: Joi.number().integer().min(1).max(100).default(10),
     search: Joi.string().max(100).optional(),
-    roleId: Joi.number().integer().min(1).optional(),
-    statusId: Joi.number().integer().min(1).optional(),
-    freeTrial: Joi.boolean().optional(),
-    sortBy: Joi.string().valid('id', 'name', 'email', 'createdAt', 'updatedAt').default('createdAt'),
+    role_id: Joi.number().integer().min(1).optional(),
+    status_id: Joi.number().integer().min(1).optional(),
+    free_trial: Joi.boolean().optional(),
+    sortBy: Joi.string().valid('id', 'name', 'email', 'created_at', 'updated_at').default('created_at'),
     sortOrder: Joi.string().valid('ASC', 'DESC').default('DESC')
   });
 
@@ -64,13 +64,13 @@ export class UserController {
   });
 
   private readonly assignRoleSchema = Joi.object({
-    userId: Joi.number().integer().min(1).required(),
-    roleId: Joi.number().integer().min(1).required()
+    user_id: Joi.number().integer().min(1).required(),
+    role_id: Joi.number().integer().min(1).required()
   });
 
   private readonly removeRoleSchema = Joi.object({
-    userId: Joi.number().integer().min(1).required(),
-    roleId: Joi.number().integer().min(1).required()
+    user_id: Joi.number().integer().min(1).required(),
+    role_id: Joi.number().integer().min(1).required()
   });
 
   /**
@@ -85,7 +85,7 @@ export class UserController {
 
       if (result.success) {
         this.loggingMiddleware.logBusinessEvent('user_created', {
-          userId: result.data?.id,
+          user_id: result.data?.id,
           email: req.body.email,
           createdBy: (req as any).user?.id
         });
@@ -117,10 +117,10 @@ export class UserController {
         page: parseInt(req.query.page as string) || 1,
         limit: parseInt(req.query.limit as string) || 10,
         search: req.query.search as string,
-        roleId: req.query.roleId ? parseInt(req.query.roleId as string) : undefined,
-        statusId: req.query.statusId ? parseInt(req.query.statusId as string) : undefined,
-        freeTrial: req.query.freeTrial ? req.query.freeTrial === 'true' : undefined,
-        sortBy: (req.query.sortBy as string) || 'createdAt',
+        role_id: req.query.role_id ? parseInt(req.query.role_id as string) : undefined,
+        status_id: req.query.status_id ? parseInt(req.query.status_id as string) : undefined,
+        free_trial: req.query.free_trial ? req.query.free_trial === 'true' : undefined,
+        sortBy: (req.query.sortBy as string) || 'created_at',
         sortOrder: (req.query.sortOrder as string) || 'DESC'
       };
 
@@ -287,7 +287,7 @@ export class UserController {
   public removeRole = async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = parseInt((req.params.id as string) || '0');
-      const roleId = parseInt((req.params.roleId as string) || '0');
+      const roleId = parseInt((req.params.role_id as string) || '0');
       
       this.logger.info('Role removal attempt', { userId, roleId });
 

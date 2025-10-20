@@ -4,22 +4,22 @@ import { sequelize } from '../config/sequelize';
 // UserRole attributes interface
 interface UserRoleAttributes {
   id: number;
-  userId: number;
-  roleId: number;
-  createdAt?: Date;
-  updatedAt?: Date;
+  user_id: number;
+  role_id: number;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 // UserRole creation attributes
-interface UserRoleCreationAttributes extends Optional<UserRoleAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
+interface UserRoleCreationAttributes extends Optional<UserRoleAttributes, 'id' | 'created_at' | 'updated_at'> {}
 
 // UserRole model class
 class UserRole extends Model<UserRoleAttributes, UserRoleCreationAttributes> implements UserRoleAttributes {
   public id!: number;
-  public userId!: number;
-  public roleId!: number;
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+  public user_id!: number;
+  public role_id!: number;
+  public readonly created_at!: Date;
+  public readonly updated_at!: Date;
 
   // Associations
   public User?: any;
@@ -39,7 +39,7 @@ UserRole.init(
       autoIncrement: true,
       primaryKey: true,
     },
-    userId: {
+    user_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
@@ -47,7 +47,7 @@ UserRole.init(
         key: 'id',
       },
     },
-    roleId: {
+    role_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
@@ -55,12 +55,12 @@ UserRole.init(
         key: 'id',
       },
     },
-    createdAt: {
+    created_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
-    updatedAt: {
+    updated_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
@@ -73,13 +73,13 @@ UserRole.init(
     indexes: [
       {
         unique: true,
-        fields: ['userId', 'roleId'], // Composite unique index
+        fields: ['user_id', 'role_id'], // Composite unique index
       },
       {
-        fields: ['userId'],
+        fields: ['user_id'],
       },
       {
-        fields: ['roleId'],
+        fields: ['role_id'],
       },
     ],
   }

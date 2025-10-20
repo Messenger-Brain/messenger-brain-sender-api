@@ -465,3 +465,7 @@ npm test
 # Verificar conexión DB
 npm run db:test
 ```
+
+
+
+lsof -ti:9000 | xargs kill -9

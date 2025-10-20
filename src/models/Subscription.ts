@@ -6,24 +6,24 @@ interface SubscriptionAttributes {
   id: number;
   slug: string;
   description: string;
-  statusId: number;
+  subscription_status_id: number;
   price: number;
-  createdAt?: Date;
-  updatedAt?: Date;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 // Subscription creation attributes
-interface SubscriptionCreationAttributes extends Optional<SubscriptionAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
+interface SubscriptionCreationAttributes extends Optional<SubscriptionAttributes, 'id' | 'created_at' | 'updated_at'> {}
 
 // Subscription model class
 class Subscription extends Model<SubscriptionAttributes, SubscriptionCreationAttributes> implements SubscriptionAttributes {
   public id!: number;
   public slug!: string;
   public description!: string;
-  public statusId!: number;
+  public subscription_status_id!: number;
   public price!: number;
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+  public readonly created_at!: Date;
+  public readonly updated_at!: Date;
 
   // Associations
   public SubscriptionStatus?: any;
@@ -62,7 +62,7 @@ Subscription.init(
         len: [5, 500],
       },
     },
-    statusId: {
+    subscription_status_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
@@ -77,12 +77,12 @@ Subscription.init(
         min: 0,
       },
     },
-    createdAt: {
+    created_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
-    updatedAt: {
+    updated_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
@@ -98,7 +98,7 @@ Subscription.init(
         fields: ['slug'],
       },
       {
-        fields: ['statusId'],
+        fields: ['subscription_status_id'],
       },
       {
         fields: ['price'],

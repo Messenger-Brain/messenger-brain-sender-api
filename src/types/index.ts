@@ -9,7 +9,7 @@ declare global {
         email: string;
         role: string;
         status: string;
-        freeTrial: boolean;
+        free_trial: boolean;
       };
     }
   }
@@ -22,7 +22,7 @@ export type AuthenticatedRequest = Request & {
     email: string;
     role: string;
     status: string;
-    freeTrial: boolean;
+    free_trial: boolean;
   };
 };
 
@@ -101,7 +101,7 @@ export interface AuthResponse {
       email: string;
       role: string;
       status: string;
-      freeTrial: boolean;
+      free_trial: boolean;
     };
     token: string;
     refreshToken?: string;

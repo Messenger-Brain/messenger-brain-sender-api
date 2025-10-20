@@ -5,20 +5,20 @@ import { sequelize } from '../config/sequelize';
 interface SubscriptionFeatureAttributes {
   id: number;
   slug: string;
-  subscriptionId: number;
+  subscription_id: number;
   value: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 // SubscriptionFeature creation attributes
-interface SubscriptionFeatureCreationAttributes extends Optional<SubscriptionFeatureAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
+interface SubscriptionFeatureCreationAttributes extends Optional<SubscriptionFeatureAttributes, 'id' | 'created_at' | 'updated_at'> {}
 
 // SubscriptionFeature model class
 class SubscriptionFeature extends Model<SubscriptionFeatureAttributes, SubscriptionFeatureCreationAttributes> implements SubscriptionFeatureAttributes {
   public id!: number;
   public slug!: string;
-  public subscriptionId!: number;
+  public subscription_id!: number;
   public value!: string;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
@@ -49,7 +49,7 @@ SubscriptionFeature.init(
         is: /^[a-z0-9_-]+$/i,
       },
     },
-    subscriptionId: {
+    subscription_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
@@ -65,12 +65,12 @@ SubscriptionFeature.init(
         len: [1, 1000],
       },
     },
-    createdAt: {
+    created_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
-    updatedAt: {
+    updated_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
@@ -83,10 +83,10 @@ SubscriptionFeature.init(
     indexes: [
       {
         unique: true,
-        fields: ['subscriptionId', 'slug'], // Composite unique index
+        fields: ['subscription_id', 'slug'], // Composite unique index
       },
       {
-        fields: ['subscriptionId'],
+        fields: ['subscription_id'],
       },
     ],
   }

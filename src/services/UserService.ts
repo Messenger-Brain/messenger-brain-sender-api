@@ -17,19 +17,19 @@ import {
 
 export interface UserServiceInterface {
   createUser(userData: CreateUserRequest): Promise<ApiResponse<User>>;
-  getUserById(userId: number): Promise<ApiResponse<User>>;
+  getUserById(user_id: number): Promise<ApiResponse<User>>;
   getAllUsers(pagination?: PaginationQuery, filters?: FilterQuery): Promise<PaginatedResponse<User>>;
-  updateUser(userId: number, userData: UpdateUserRequest): Promise<ApiResponse<User>>;
-  deleteUser(userId: number): Promise<ApiResponse<void>>;
-  getUserRoles(userId: number): Promise<ApiResponse<Role[]>>;
-  assignRole(userId: number, roleId: number): Promise<ApiResponse<void>>;
-  removeRole(userId: number, roleId: number): Promise<ApiResponse<void>>;
-  getUserActivities(userId: number, pagination?: PaginationQuery): Promise<PaginatedResponse<UserActivity>>;
-  logUserActivity(userId: number, slug: string, description: string): Promise<ApiResponse<void>>;
+  updateUser(user_id: number, userData: UpdateUserRequest): Promise<ApiResponse<User>>;
+  deleteUser(user_id: number): Promise<ApiResponse<void>>;
+  getUserRoles(user_id: number): Promise<ApiResponse<Role[]>>;
+  assignRole(user_id: number, role_id: number): Promise<ApiResponse<void>>;
+  removeRole(user_id: number, role_id: number): Promise<ApiResponse<void>>;
+  getUserActivities(user_id: number, pagination?: PaginationQuery): Promise<PaginatedResponse<UserActivity>>;
+  logUserActivity(user_id: number, slug: string, description: string): Promise<ApiResponse<void>>;
   searchUsers(searchTerm: string, pagination?: PaginationQuery): Promise<PaginatedResponse<User>>;
   getUsersByRole(roleSlug: string, pagination?: PaginationQuery): Promise<PaginatedResponse<User>>;
   getUsersByStatus(statusSlug: string, pagination?: PaginationQuery): Promise<PaginatedResponse<User>>;
-  toggleUserStatus(userId: number): Promise<ApiResponse<User>>;
+  toggleUserStatus(user_id: number): Promise<ApiResponse<User>>;
   getUserStats(): Promise<ApiResponse<any>>;
 }
 
@@ -74,22 +74,22 @@ export class UserService implements UserServiceInterface {
         name: userData.name,
         email: userData.email,
         password: userData.password,
-        statusId: userData.statusId,
-        freeTrial: userData.freeTrial ?? false
+        status_id: userData.statusId,
+        free_trial: userData.freeTrial ?? false
       });
 
       // Assign role if provided
       if (userData.roleId) {
         await UserRole.create({
-          userId: user.id,
-          roleId: userData.roleId
+          user_id: user.id,
+          role_id: userData.roleId
         });
       }
 
       // Log activity
       await this.logUserActivity(user.id, 'user_created', `User ${user.name} was created`);
 
-      this.logger.info('User created successfully', { userId: user.id });
+      this.logger.info('User created successfully', { user_id: user.id });
 
       return {
         success: true,
@@ -110,9 +110,9 @@ export class UserService implements UserServiceInterface {
   /**
    * Get user by ID with relations
    */
-  public async getUserById(userId: number): Promise<ApiResponse<User>> {
+  public async getUserById(user_id: number): Promise<ApiResponse<User>> {
     try {
-      const user = await User.findByPk(userId, {
+      const user = await User.findByPk(user_id, {
         include: [
           {
             model: UserRole,
@@ -155,7 +155,7 @@ export class UserService implements UserServiceInterface {
       const page = pagination.page || 1;
       const limit = pagination.limit || 10;
       const offset = (page - 1) * limit;
-      const sortBy = pagination.sortBy || 'createdAt';
+      const sortBy = pagination.sortBy || 'created_at';
       const sortOrder = pagination.sortOrder || 'DESC';
 
       // Build where clause
@@ -169,7 +169,7 @@ export class UserService implements UserServiceInterface {
       }
 
       if (filters.status) {
-        whereClause.statusId = await this.getStatusIdBySlug(filters.status);
+        whereClause.status_id = await this.getStatusIdBySlug(filters.status);
       }
 
       // Get users with pagination
@@ -223,11 +223,11 @@ export class UserService implements UserServiceInterface {
   /**
    * Update user
    */
-  public async updateUser(userId: number, userData: UpdateUserRequest): Promise<ApiResponse<User>> {
+  public async updateUser(user_id: number, userData: UpdateUserRequest): Promise<ApiResponse<User>> {
     try {
-      this.logger.info('Updating user', { userId });
+      this.logger.info('Updating user', { user_id });
 
-      const user = await User.findByPk(userId);
+      const user = await User.findByPk(user_id);
       if (!user) {
         return {
           success: false,
@@ -240,14 +240,14 @@ export class UserService implements UserServiceInterface {
 
       // Update role if provided
       if (userData.roleId) {
-        await UserRole.destroy({ where: { userId } });
-        await UserRole.create({ userId, roleId: userData.roleId });
+        await UserRole.destroy({ where: { user_id } });
+        await UserRole.create({ user_id, role_id: userData.roleId });
       }
 
       // Log activity
-      await this.logUserActivity(userId, 'user_updated', `User ${user.name} was updated`);
+      await this.logUserActivity(user_id, 'user_updated', `User ${user.name} was updated`);
 
-      const updatedUser = await this.getUserById(userId);
+      const updatedUser = await this.getUserById(user_id);
       
       return {
         success: true,
@@ -268,11 +268,11 @@ export class UserService implements UserServiceInterface {
   /**
    * Delete user
    */
-  public async deleteUser(userId: number): Promise<ApiResponse<void>> {
+  public async deleteUser(user_id: number): Promise<ApiResponse<void>> {
     try {
-      this.logger.info('Deleting user', { userId });
+      this.logger.info('Deleting user', { user_id });
 
-      const user = await User.findByPk(userId);
+      const user = await User.findByPk(user_id);
       if (!user) {
         return {
           success: false,
@@ -281,15 +281,15 @@ export class UserService implements UserServiceInterface {
       }
 
       // Delete user roles first
-      await UserRole.destroy({ where: { userId } });
+      await UserRole.destroy({ where: { user_id: user_id } });
 
       // Delete user activities
-      await UserActivity.destroy({ where: { userId } });
+      await UserActivity.destroy({ where: { user_id: user_id } });
 
       // Delete user
       await user.destroy();
 
-      this.logger.info('User deleted successfully', { userId });
+      this.logger.info('User deleted successfully', { user_id });
 
       return {
         success: true,
@@ -309,10 +309,10 @@ export class UserService implements UserServiceInterface {
   /**
    * Get user roles
    */
-  public async getUserRoles(userId: number): Promise<ApiResponse<Role[]>> {
+  public async getUserRoles(user_id: number): Promise<ApiResponse<Role[]>> {
     try {
       const userRoles = await UserRole.findAll({
-        where: { userId },
+        where: { user_id: user_id },
         include: [{ model: Role }]
       });
 
@@ -337,11 +337,11 @@ export class UserService implements UserServiceInterface {
   /**
    * Assign role to user
    */
-  public async assignRole(userId: number, roleId: number): Promise<ApiResponse<void>> {
+  public async assignRole(user_id: number, role_id: number): Promise<ApiResponse<void>> {
     try {
       // Check if role already assigned
       const existingRole = await UserRole.findOne({
-        where: { userId, roleId }
+        where: { user_id: user_id, role_id }
       });
 
       if (existingRole) {
@@ -351,10 +351,10 @@ export class UserService implements UserServiceInterface {
         };
       }
 
-      await UserRole.create({ userId, roleId });
+      await UserRole.create({ user_id: user_id, role_id });
 
       // Log activity
-      await this.logUserActivity(userId, 'role_assigned', `Role assigned to user`);
+      await this.logUserActivity(user_id, 'role_assigned', `Role assigned to user`);
 
       return {
         success: true,
@@ -374,10 +374,10 @@ export class UserService implements UserServiceInterface {
   /**
    * Remove role from user
    */
-  public async removeRole(userId: number, roleId: number): Promise<ApiResponse<void>> {
+  public async removeRole(user_id: number, role_id: number): Promise<ApiResponse<void>> {
     try {
       const deletedCount = await UserRole.destroy({
-        where: { userId, roleId }
+        where: { user_id: user_id, role_id }
       });
 
       if (deletedCount === 0) {
@@ -388,7 +388,7 @@ export class UserService implements UserServiceInterface {
       }
 
       // Log activity
-      await this.logUserActivity(userId, 'role_removed', `Role removed from user`);
+      await this.logUserActivity(user_id, 'role_removed', `Role removed from user`);
 
       return {
         success: true,
@@ -408,16 +408,16 @@ export class UserService implements UserServiceInterface {
   /**
    * Get user activities
    */
-  public async getUserActivities(userId: number, pagination: PaginationQuery = {}): Promise<PaginatedResponse<UserActivity>> {
+  public async getUserActivities(user_id: number, pagination: PaginationQuery = {}): Promise<PaginatedResponse<UserActivity>> {
     try {
       const page = pagination.page || 1;
       const limit = pagination.limit || 10;
       const offset = (page - 1) * limit;
-      const sortBy = pagination.sortBy || 'createdAt';
+      const sortBy = pagination.sortBy || 'created_at';
       const sortOrder = pagination.sortOrder || 'DESC';
 
       const { count, rows } = await UserActivity.findAndCountAll({
-        where: { userId },
+        where: { user_id },
         limit,
         offset,
         order: [[sortBy, sortOrder]]
@@ -457,10 +457,9 @@ export class UserService implements UserServiceInterface {
   /**
    * Log user activity
    */
-  public async logUserActivity(userId: number, slug: string, description: string): Promise<ApiResponse<void>> {
+  public async logUserActivity(user_id: number, slug: string, description: string): Promise<ApiResponse<void>> {
     try {
-      await UserActivity.create({
-        userId,
+      await UserActivity.create({ user_id: user_id,
         slug,
         description
       });
@@ -609,9 +608,21 @@ export class UserService implements UserServiceInterface {
       const offset = (page - 1) * limit;
 
       const statusId = await this.getStatusIdBySlug(statusSlug);
+      if (!statusId) {
+        return {
+          success: false,
+          message: 'Status not found',
+          pagination: {
+            page: pagination.page || 1,
+            limit: pagination.limit || 10,
+            total: 0,
+            totalPages: 0
+          }
+        };
+      }
 
       const { count, rows } = await User.findAndCountAll({
-        where: { statusId },
+        where: { status_id: statusId },
         include: [
           {
             model: UserRole,
@@ -658,11 +669,24 @@ export class UserService implements UserServiceInterface {
   }
 
   /**
+   * Get status ID by slug
+   */
+  private async getStatusIdBySlug(slug: string): Promise<number | null> {
+    try {
+      const status = await UserStatus.findOne({ where: { slug } });
+      return status ? status.id : null;
+    } catch (error) {
+      this.logger.error('Failed to get status ID by slug', error);
+      return null;
+    }
+  }
+
+  /**
    * Toggle user status (active/inactive)
    */
-  public async toggleUserStatus(userId: number): Promise<ApiResponse<User>> {
+  public async toggleUserStatus(user_id: number): Promise<ApiResponse<User>> {
     try {
-      const user = await User.findByPk(userId);
+      const user = await User.findByPk(user_id);
       if (!user) {
         return {
           success: false,
@@ -670,15 +694,25 @@ export class UserService implements UserServiceInterface {
         };
       }
 
-      // Toggle between active (1) and inactive (2) status
-      const newStatusId = user.statusId === 1 ? 2 : 1;
-      await user.update({ statusId: newStatusId });
+      // Toggle between active and inactive status
+      const activeStatusId = await this.getStatusIdBySlug('active');
+      const inactiveStatusId = await this.getStatusIdBySlug('inactive');
+      
+      if (!activeStatusId || !inactiveStatusId) {
+        return {
+          success: false,
+          message: 'Status configuration error'
+        };
+      }
+
+      const newStatusId = user.status_id === activeStatusId ? inactiveStatusId : activeStatusId;
+      await user.update({ status_id: newStatusId });
 
       // Log activity
-      const statusText = newStatusId === 1 ? 'activated' : 'deactivated';
-      await this.logUserActivity(userId, 'status_toggled', `User ${statusText}`);
+      const statusText = newStatusId === activeStatusId ? 'activated' : 'deactivated';
+      await this.logUserActivity(user_id, 'status_toggled', `User ${statusText}`);
 
-      const updatedUser = await this.getUserById(userId);
+      const updatedUser = await this.getUserById(user_id);
 
       return {
         success: true,
@@ -702,15 +736,19 @@ export class UserService implements UserServiceInterface {
   public async getUserStats(): Promise<ApiResponse<any>> {
     try {
       const totalUsers = await User.count();
-      const activeUsers = await User.count({ where: { statusId: 1 } });
-      const inactiveUsers = await User.count({ where: { statusId: 2 } });
-      const freeTrialUsers = await User.count({ where: { freeTrial: true } });
+      
+      const activeStatusId = await this.getStatusIdBySlug('active');
+      const inactiveStatusId = await this.getStatusIdBySlug('inactive');
+      
+      const activeUsers = activeStatusId ? await User.count({ where: { status_id: activeStatusId } }) : 0;
+      const inactiveUsers = inactiveStatusId ? await User.count({ where: { status_id: inactiveStatusId } }) : 0;
+      const freeTrialUsers = await User.count({ where: { free_trial: true } });
 
       // Get role distribution
       const roleStats = await UserRole.findAll({
         include: [{ model: Role }],
-        attributes: ['roleId'],
-        group: ['roleId']
+        attributes: ['role_id'],
+        group: ['role_id']
       });
 
       const stats = {
@@ -740,13 +778,6 @@ export class UserService implements UserServiceInterface {
     }
   }
 
-  /**
-   * Helper method to get status ID by slug
-   */
-  private async getStatusIdBySlug(slug: string): Promise<number> {
-    const status = await UserStatus.findOne({ where: { slug } });
-    return status?.id || 1; // Default to active status
-  }
 }
 
 export default UserService;

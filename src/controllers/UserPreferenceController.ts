@@ -28,7 +28,7 @@ export class UserPreferenceController {
     try {
       const page = parseInt((req.query.page as string) || '1');
       const limit = parseInt((req.query.limit as string) || '10');
-      const userId = req.query.userId ? parseInt(req.query.userId as string) : req.user!.id;
+      const userId = req.query.user_id ? parseInt(req.query.user_id as string) : req.user!.id;
       
       const result = await this.preferenceService.getUserPreferences(userId, { page, limit });
       
@@ -54,7 +54,7 @@ export class UserPreferenceController {
     try {
       const preferenceData = {
         ...req.body,
-        userId: req.user!.id
+        user_id: req.user!.id
       };
       
       const result = await this.preferenceService.createUserPreference(preferenceData);

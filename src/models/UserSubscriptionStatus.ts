@@ -6,12 +6,12 @@ interface UserSubscriptionStatusAttributes {
   id: number;
   slug: string;
   description: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 // UserSubscriptionStatus creation attributes
-interface UserSubscriptionStatusCreationAttributes extends Optional<UserSubscriptionStatusAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
+interface UserSubscriptionStatusCreationAttributes extends Optional<UserSubscriptionStatusAttributes, 'id' | 'created_at' | 'updated_at'> {}
 
 // UserSubscriptionStatus model class
 class UserSubscriptionStatus extends Model<UserSubscriptionStatusAttributes, UserSubscriptionStatusCreationAttributes> implements UserSubscriptionStatusAttributes {
@@ -56,12 +56,12 @@ UserSubscriptionStatus.init(
         len: [5, 500],
       },
     },
-    createdAt: {
+    created_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
-    updatedAt: {
+    updated_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,

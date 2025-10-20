@@ -70,7 +70,7 @@ export class RateLimitMiddleware {
           count: entry.count,
           maxRequests: config.maxRequests,
           windowMs: config.windowMs,
-          userId: req.user?.id,
+          user_id: req.user?.id,
           tokenType: req.tokenType
         });
 
@@ -94,7 +94,7 @@ export class RateLimitMiddleware {
         key,
         count: entry.count,
         maxRequests: config.maxRequests,
-        userId: req.user?.id,
+        user_id: req.user?.id,
         tokenType: req.tokenType
       });
 
@@ -218,7 +218,7 @@ export class RateLimitMiddleware {
     }
 
     // Special limits for free trial users
-    if (req.user.freeTrial) {
+    if (req.user.free_trial) {
       maxRequests = Math.floor(maxRequests * 0.1); // 10% of normal limits
     }
 

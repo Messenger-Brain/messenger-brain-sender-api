@@ -6,12 +6,12 @@ interface BrowserContextStatusAttributes {
   id: number;
   slug: string;
   description: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 // BrowserContextStatus creation attributes
-interface BrowserContextStatusCreationAttributes extends Optional<BrowserContextStatusAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
+interface BrowserContextStatusCreationAttributes extends Optional<BrowserContextStatusAttributes, 'id' | 'created_at' | 'updated_at'> {}
 
 // BrowserContextStatus model class
 class BrowserContextStatus extends Model<BrowserContextStatusAttributes, BrowserContextStatusCreationAttributes> implements BrowserContextStatusAttributes {
@@ -56,12 +56,12 @@ BrowserContextStatus.init(
         len: [5, 500],
       },
     },
-    createdAt: {
+    created_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
-    updatedAt: {
+    updated_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,

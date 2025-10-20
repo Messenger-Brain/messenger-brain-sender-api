@@ -53,7 +53,7 @@ export class LoggingMiddleware {
       ip: req.ip || req.connection.remoteAddress,
       origin: req.get('origin'),
       referer: req.get('referer'),
-      userId: req.user?.id,
+      user_id: req.user?.id,
       tokenType: (req as any).tokenType,
       userRole: req.user?.role,
       contentLength: res.get('content-length'),
@@ -152,7 +152,7 @@ export class LoggingMiddleware {
       ip: req.ip || req.connection.remoteAddress,
       userAgent: req.get('user-agent'),
       origin: req.get('origin'),
-      userId: req.user?.id,
+      user_id: req.user?.id,
       tokenType: (req as any).tokenType
     };
 
@@ -231,10 +231,10 @@ export class LoggingMiddleware {
   /**
    * Log API usage statistics
    */
-  public logApiUsage = (endpoint: string, userId?: number, tokenType?: string): void => {
+  public logApiUsage = (endpoint: string, user_id?: number, tokenType?: string): void => {
     this.logger.info('API Usage', {
       endpoint,
-      userId,
+      user_id,
       tokenType,
       timestamp: new Date().toISOString()
     });
@@ -254,11 +254,11 @@ export class LoggingMiddleware {
   /**
    * Log file upload events
    */
-  public logFileUpload = (filename: string, size: number, userId?: number, success: boolean = true): void => {
+  public logFileUpload = (filename: string, size: number, user_id?: number, success: boolean = true): void => {
     this.logger.info('File Upload', {
       filename,
       size: `${size} bytes`,
-      userId,
+      user_id,
       success,
       timestamp: new Date().toISOString()
     });
@@ -267,18 +267,18 @@ export class LoggingMiddleware {
   /**
    * Log message sending events
    */
-  public logMessageEvent = (event: 'sent' | 'failed' | 'queued', phoneNumber: string, details?: any): void => {
-    this.logger.messageEvent(event, phoneNumber, details);
+  public logMessageEvent = (event: 'sent' | 'failed' | 'queued', phone_number: string, details?: any): void => {
+    this.logger.messageEvent(event, phone_number, details);
   };
 
   /**
    * Log WhatsApp session events
    */
-  public logWhatsAppEvent = (event: string, sessionId: number, userId: number, success: boolean, details?: any): void => {
+  public logWhatsAppEvent = (event: string, sessionId: number, user_id: number, success: boolean, details?: any): void => {
     this.logger.info('WhatsApp Session Event', {
       event,
       sessionId,
-      userId,
+      user_id,
       success,
       timestamp: new Date().toISOString(),
       ...details
@@ -288,11 +288,11 @@ export class LoggingMiddleware {
   /**
    * Log subscription events
    */
-  public logSubscriptionEvent = (event: string, userId: number, subscriptionId?: number, details?: any): void => {
+  public logSubscriptionEvent = (event: string, user_id: number, subscription_id?: number, details?: any): void => {
     this.logger.info('Subscription Event', {
       event,
-      userId,
-      subscriptionId,
+      user_id,
+      subscription_id,
       timestamp: new Date().toISOString(),
       ...details
     });

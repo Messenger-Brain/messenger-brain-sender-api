@@ -4,24 +4,24 @@ import { sequelize } from '../config/sequelize';
 // UserPreference attributes interface
 interface UserPreferenceAttributes {
   id: number;
-  userId: number;
-  systemPreferenceId: number;
-  statusId: number;
-  createdAt?: Date;
-  updatedAt?: Date;
+  user_id: number;
+  system_preference_id: number;
+  status_id: number;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 // UserPreference creation attributes
-interface UserPreferenceCreationAttributes extends Optional<UserPreferenceAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
+interface UserPreferenceCreationAttributes extends Optional<UserPreferenceAttributes, 'id' | 'created_at' | 'updated_at'> {}
 
 // UserPreference model class
 class UserPreference extends Model<UserPreferenceAttributes, UserPreferenceCreationAttributes> implements UserPreferenceAttributes {
   public id!: number;
-  public userId!: number;
-  public systemPreferenceId!: number;
-  public statusId!: number;
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+  public user_id!: number;
+  public system_preference_id!: number;
+  public status_id!: number;
+  public readonly created_at!: Date;
+  public readonly updated_at!: Date;
 
   // Associations
   public User?: any;
@@ -43,7 +43,7 @@ UserPreference.init(
       autoIncrement: true,
       primaryKey: true,
     },
-    userId: {
+    user_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
@@ -51,7 +51,7 @@ UserPreference.init(
         key: 'id',
       },
     },
-    systemPreferenceId: {
+    system_preference_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
@@ -59,7 +59,7 @@ UserPreference.init(
         key: 'id',
       },
     },
-    statusId: {
+    status_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
@@ -67,12 +67,12 @@ UserPreference.init(
         key: 'id',
       },
     },
-    createdAt: {
+    created_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
-    updatedAt: {
+    updated_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
@@ -85,16 +85,16 @@ UserPreference.init(
     indexes: [
       {
         unique: true,
-        fields: ['userId', 'systemPreferenceId'], // Composite unique index
+        fields: ['user_id', 'system_preference_id'], // Composite unique index
       },
       {
-        fields: ['userId'],
+        fields: ['user_id'],
       },
       {
-        fields: ['systemPreferenceId'],
+        fields: ['system_preference_id'],
       },
       {
-        fields: ['statusId'],
+        fields: ['status_id'],
       },
     ],
   }

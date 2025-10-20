@@ -6,12 +6,12 @@ interface UserPreferenceStatusAttributes {
   id: number;
   slug: string;
   description: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 // UserPreferenceStatus creation attributes
-interface UserPreferenceStatusCreationAttributes extends Optional<UserPreferenceStatusAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
+interface UserPreferenceStatusCreationAttributes extends Optional<UserPreferenceStatusAttributes, 'id' | 'created_at' | 'updated_at'> {}
 
 // UserPreferenceStatus model class
 class UserPreferenceStatus extends Model<UserPreferenceStatusAttributes, UserPreferenceStatusCreationAttributes> implements UserPreferenceStatusAttributes {
@@ -56,12 +56,12 @@ UserPreferenceStatus.init(
         len: [5, 500],
       },
     },
-    createdAt: {
+    created_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
-    updatedAt: {
+    updated_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,

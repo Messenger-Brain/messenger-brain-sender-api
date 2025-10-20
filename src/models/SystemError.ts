@@ -5,12 +5,12 @@ import { sequelize } from '../config/sequelize';
 interface SystemErrorAttributes {
   id: number;
   log: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 // SystemError creation attributes
-interface SystemErrorCreationAttributes extends Optional<SystemErrorAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
+interface SystemErrorCreationAttributes extends Optional<SystemErrorAttributes, 'id' | 'created_at' | 'updated_at'> {}
 
 // SystemError model class
 class SystemError extends Model<SystemErrorAttributes, SystemErrorCreationAttributes> implements SystemErrorAttributes {
@@ -40,12 +40,12 @@ SystemError.init(
         notEmpty: true,
       },
     },
-    createdAt: {
+    created_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
-    updatedAt: {
+    updated_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
@@ -57,7 +57,7 @@ SystemError.init(
     timestamps: true,
     indexes: [
       {
-        fields: ['createdAt'],
+        fields: ['created_at'],
       },
     ],
   }

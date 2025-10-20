@@ -20,24 +20,24 @@ import {
 
 export interface SubscriptionServiceInterface {
   createSubscription(subscriptionData: CreateSubscriptionRequest): Promise<ApiResponse<Subscription>>;
-  getSubscriptionById(subscriptionId: number): Promise<ApiResponse<Subscription>>;
+  getSubscriptionById(subscription_id: number): Promise<ApiResponse<Subscription>>;
   getAllSubscriptions(pagination?: PaginationQuery, filters?: FilterQuery): Promise<PaginatedResponse<Subscription>>;
-  updateSubscription(subscriptionId: number, subscriptionData: UpdateSubscriptionRequest): Promise<ApiResponse<Subscription>>;
-  deleteSubscription(subscriptionId: number): Promise<ApiResponse<void>>;
+  updateSubscription(subscription_id: number, subscriptionData: UpdateSubscriptionRequest): Promise<ApiResponse<Subscription>>;
+  deleteSubscription(subscription_id: number): Promise<ApiResponse<void>>;
   getActiveSubscriptions(): Promise<ApiResponse<Subscription[]>>;
   createUserSubscription(userSubscriptionData: CreateUserSubscriptionRequest): Promise<ApiResponse<UserSubscription>>;
-  getUserSubscriptionById(userSubscriptionId: number, userId: number): Promise<ApiResponse<UserSubscription>>;
-  getUserSubscriptions(userId: number, pagination?: PaginationQuery): Promise<PaginatedResponse<UserSubscription>>;
-  updateUserSubscription(userSubscriptionId: number, userId: number, userSubscriptionData: UpdateUserSubscriptionRequest): Promise<ApiResponse<UserSubscription>>;
-  deleteUserSubscription(userSubscriptionId: number, userId: number): Promise<ApiResponse<void>>;
-  getUserActiveSubscription(userId: number): Promise<ApiResponse<UserSubscription | null>>;
-  getSubscriptionFeatures(subscriptionId: number): Promise<ApiResponse<SubscriptionFeature[]>>;
-  addSubscriptionFeature(subscriptionId: number, featureData: { slug: string; value: string }): Promise<ApiResponse<SubscriptionFeature>>;
+  getUserSubscriptionById(userSubscriptionId: number, user_id: number): Promise<ApiResponse<UserSubscription>>;
+  getUserSubscriptions(user_id: number, pagination?: PaginationQuery): Promise<PaginatedResponse<UserSubscription>>;
+  updateUserSubscription(userSubscriptionId: number, user_id: number, userSubscriptionData: UpdateUserSubscriptionRequest): Promise<ApiResponse<UserSubscription>>;
+  deleteUserSubscription(userSubscriptionId: number, user_id: number): Promise<ApiResponse<void>>;
+  getUserActiveSubscription(user_id: number): Promise<ApiResponse<UserSubscription | null>>;
+  getSubscriptionFeatures(subscription_id: number): Promise<ApiResponse<SubscriptionFeature[]>>;
+  addSubscriptionFeature(subscription_id: number, featureData: { slug: string; value: string }): Promise<ApiResponse<SubscriptionFeature>>;
   updateSubscriptionFeature(featureId: number, featureData: { slug?: string; value?: string }): Promise<ApiResponse<SubscriptionFeature>>;
   deleteSubscriptionFeature(featureId: number): Promise<ApiResponse<void>>;
   getSubscriptionStats(): Promise<ApiResponse<any>>;
-  getUserSubscriptionStats(userId: number): Promise<ApiResponse<any>>;
-  validateUserSubscriptionAccess(userSubscriptionId: number, userId: number): Promise<boolean>;
+  getUserSubscriptionStats(user_id: number): Promise<ApiResponse<any>>;
+  validateUserSubscriptionAccess(userSubscriptionId: number, user_id: number): Promise<boolean>;
 }
 
 export class SubscriptionService implements SubscriptionServiceInterface {
@@ -80,14 +80,14 @@ export class SubscriptionService implements SubscriptionServiceInterface {
       const subscription = await Subscription.create({
         slug: subscriptionData.slug,
         description: subscriptionData.description,
-        statusId: subscriptionData.statusId,
+        subscription_status_id: subscriptionData.statusId,
         price: subscriptionData.price
       });
 
       // Get subscription with relations
       const subscriptionWithRelations = await this.getSubscriptionById(subscription.id);
 
-      this.logger.info('Subscription created successfully', { subscriptionId: subscription.id });
+      this.logger.info('Subscription created successfully', { subscription_id: subscription.id });
 
       return {
         success: true,
@@ -108,9 +108,9 @@ export class SubscriptionService implements SubscriptionServiceInterface {
   /**
    * Get subscription by ID
    */
-  public async getSubscriptionById(subscriptionId: number): Promise<ApiResponse<Subscription>> {
+  public async getSubscriptionById(subscription_id: number): Promise<ApiResponse<Subscription>> {
     try {
-      const subscription = await Subscription.findByPk(subscriptionId, {
+      const subscription = await Subscription.findByPk(subscription_id, {
         include: [
           {
             model: SubscriptionStatus
@@ -152,7 +152,7 @@ export class SubscriptionService implements SubscriptionServiceInterface {
       const page = pagination.page || 1;
       const limit = pagination.limit || 10;
       const offset = (page - 1) * limit;
-      const sortBy = pagination.sortBy || 'createdAt';
+      const sortBy = pagination.sortBy || 'created_at';
       const sortOrder = pagination.sortOrder || 'DESC';
 
       // Build where clause
@@ -166,7 +166,7 @@ export class SubscriptionService implements SubscriptionServiceInterface {
       }
 
       if (filters.status) {
-        whereClause.statusId = await this.getStatusIdBySlug(filters.status);
+        whereClause.status_id = await this.getStatusIdBySlug(filters.status);
       }
 
       // Get subscriptions with pagination
@@ -219,11 +219,11 @@ export class SubscriptionService implements SubscriptionServiceInterface {
   /**
    * Update subscription
    */
-  public async updateSubscription(subscriptionId: number, subscriptionData: UpdateSubscriptionRequest): Promise<ApiResponse<Subscription>> {
+  public async updateSubscription(subscription_id: number, subscriptionData: UpdateSubscriptionRequest): Promise<ApiResponse<Subscription>> {
     try {
-      this.logger.info('Updating subscription', { subscriptionId });
+      this.logger.info('Updating subscription', { subscription_id });
 
-      const subscription = await Subscription.findByPk(subscriptionId);
+      const subscription = await Subscription.findByPk(subscription_id);
       if (!subscription) {
         return {
           success: false,
@@ -234,9 +234,9 @@ export class SubscriptionService implements SubscriptionServiceInterface {
       // Update subscription
       await subscription.update(subscriptionData);
 
-      const updatedSubscription = await this.getSubscriptionById(subscriptionId);
+      const updatedSubscription = await this.getSubscriptionById(subscription_id);
 
-      this.logger.info('Subscription updated successfully', { subscriptionId });
+      this.logger.info('Subscription updated successfully', { subscription_id });
 
       return {
         success: true,
@@ -257,11 +257,11 @@ export class SubscriptionService implements SubscriptionServiceInterface {
   /**
    * Delete subscription
    */
-  public async deleteSubscription(subscriptionId: number): Promise<ApiResponse<void>> {
+  public async deleteSubscription(subscription_id: number): Promise<ApiResponse<void>> {
     try {
-      this.logger.info('Deleting subscription', { subscriptionId });
+      this.logger.info('Deleting subscription', { subscription_id });
 
-      const subscription = await Subscription.findByPk(subscriptionId);
+      const subscription = await Subscription.findByPk(subscription_id);
       if (!subscription) {
         return {
           success: false,
@@ -270,15 +270,15 @@ export class SubscriptionService implements SubscriptionServiceInterface {
       }
 
       // Delete subscription features first
-      await SubscriptionFeature.destroy({ where: { subscriptionId } });
+      await SubscriptionFeature.destroy({ where: { subscription_id: subscription_id } });
 
       // Delete user subscriptions
-      await UserSubscription.destroy({ where: { subscriptionId } });
+      await UserSubscription.destroy({ where: { subscription_id: subscription_id } });
 
       // Delete subscription
       await subscription.destroy();
 
-      this.logger.info('Subscription deleted successfully', { subscriptionId });
+      this.logger.info('Subscription deleted successfully', { subscription_id });
 
       return {
         success: true,
@@ -303,7 +303,7 @@ export class SubscriptionService implements SubscriptionServiceInterface {
       const activeStatusId = await this.getStatusIdBySlug('active');
 
       const subscriptions = await Subscription.findAll({
-        where: { statusId: activeStatusId },
+        where: { subscription_status_id: activeStatusId },
         include: [
           {
             model: SubscriptionStatus
@@ -336,13 +336,13 @@ export class SubscriptionService implements SubscriptionServiceInterface {
    */
   public async createUserSubscription(userSubscriptionData: CreateUserSubscriptionRequest): Promise<ApiResponse<UserSubscription>> {
     try {
-      this.logger.info('Creating user subscription', { userId: userSubscriptionData.userId, subscriptionId: userSubscriptionData.subscriptionId });
+      this.logger.info('Creating user subscription', { user_id: userSubscriptionData.userId, subscription_id: userSubscriptionData.subscriptionId });
 
       // Check if user already has an active subscription
       const existingSubscription = await UserSubscription.findOne({
         where: {
-          userId: userSubscriptionData.userId,
-          statusId: await this.getUserSubscriptionStatusIdBySlug('active')
+          user_id: userSubscriptionData.userId,
+          status_id: await this.getUserSubscriptionStatusIdBySlug('active')
         }
       });
 
@@ -355,9 +355,9 @@ export class SubscriptionService implements SubscriptionServiceInterface {
 
       // Create user subscription
       const userSubscription = await UserSubscription.create({
-        userId: userSubscriptionData.userId,
-        subscriptionId: userSubscriptionData.subscriptionId,
-        statusId: userSubscriptionData.statusId
+        user_id: userSubscriptionData.userId,
+        subscription_id: userSubscriptionData.subscriptionId,
+        status_id: userSubscriptionData.statusId
       });
 
       // Get user subscription with relations
@@ -384,10 +384,10 @@ export class SubscriptionService implements SubscriptionServiceInterface {
   /**
    * Get user subscription by ID
    */
-  public async getUserSubscriptionById(userSubscriptionId: number, userId: number): Promise<ApiResponse<UserSubscription>> {
+  public async getUserSubscriptionById(userSubscriptionId: number, user_id: number): Promise<ApiResponse<UserSubscription>> {
     try {
       const userSubscription = await UserSubscription.findOne({
-        where: { id: userSubscriptionId, userId },
+        where: { id: userSubscriptionId, user_id: user_id },
         include: [
           {
             model: User
@@ -435,16 +435,16 @@ export class SubscriptionService implements SubscriptionServiceInterface {
   /**
    * Get user subscriptions
    */
-  public async getUserSubscriptions(userId: number, pagination: PaginationQuery = {}): Promise<PaginatedResponse<UserSubscription>> {
+  public async getUserSubscriptions(user_id: number, pagination: PaginationQuery = {}): Promise<PaginatedResponse<UserSubscription>> {
     try {
       const page = pagination.page || 1;
       const limit = pagination.limit || 10;
       const offset = (page - 1) * limit;
-      const sortBy = pagination.sortBy || 'createdAt';
+      const sortBy = pagination.sortBy || 'created_at';
       const sortOrder = pagination.sortOrder || 'DESC';
 
       const { count, rows } = await UserSubscription.findAndCountAll({
-        where: { userId },
+        where: { user_id },
         include: [
           {
             model: User
@@ -503,12 +503,12 @@ export class SubscriptionService implements SubscriptionServiceInterface {
   /**
    * Update user subscription
    */
-  public async updateUserSubscription(userSubscriptionId: number, userId: number, userSubscriptionData: UpdateUserSubscriptionRequest): Promise<ApiResponse<UserSubscription>> {
+  public async updateUserSubscription(userSubscriptionId: number, user_id: number, userSubscriptionData: UpdateUserSubscriptionRequest): Promise<ApiResponse<UserSubscription>> {
     try {
-      this.logger.info('Updating user subscription', { userSubscriptionId, userId });
+      this.logger.info('Updating user subscription', { userSubscriptionId, user_id: user_id });
 
       // Validate access
-      const accessValid = await this.validateUserSubscriptionAccess(userSubscriptionId, userId);
+      const accessValid = await this.validateUserSubscriptionAccess(userSubscriptionId, user_id);
       if (!accessValid) {
         return {
           success: false,
@@ -525,9 +525,12 @@ export class SubscriptionService implements SubscriptionServiceInterface {
       }
 
       // Update user subscription
-      await userSubscription.update(userSubscriptionData);
+      await userSubscription.update({
+        ...(userSubscriptionData.subscriptionId !== undefined && { subscription_id: userSubscriptionData.subscriptionId }),
+        ...(userSubscriptionData.statusId !== undefined && { status_id: userSubscriptionData.statusId })
+      });
 
-      const updatedUserSubscription = await this.getUserSubscriptionById(userSubscriptionId, userId);
+      const updatedUserSubscription = await this.getUserSubscriptionById(userSubscriptionId, user_id);
 
       this.logger.info('User subscription updated successfully', { userSubscriptionId });
 
@@ -550,12 +553,12 @@ export class SubscriptionService implements SubscriptionServiceInterface {
   /**
    * Delete user subscription
    */
-  public async deleteUserSubscription(userSubscriptionId: number, userId: number): Promise<ApiResponse<void>> {
+  public async deleteUserSubscription(userSubscriptionId: number, user_id: number): Promise<ApiResponse<void>> {
     try {
-      this.logger.info('Deleting user subscription', { userSubscriptionId, userId });
+      this.logger.info('Deleting user subscription', { userSubscriptionId, user_id: user_id });
 
       // Validate access
-      const accessValid = await this.validateUserSubscriptionAccess(userSubscriptionId, userId);
+      const accessValid = await this.validateUserSubscriptionAccess(userSubscriptionId, user_id);
       if (!accessValid) {
         return {
           success: false,
@@ -594,14 +597,13 @@ export class SubscriptionService implements SubscriptionServiceInterface {
   /**
    * Get user active subscription
    */
-  public async getUserActiveSubscription(userId: number): Promise<ApiResponse<UserSubscription | null>> {
+  public async getUserActiveSubscription(user_id: number): Promise<ApiResponse<UserSubscription | null>> {
     try {
       const activeStatusId = await this.getUserSubscriptionStatusIdBySlug('active');
 
       const userSubscription = await UserSubscription.findOne({
-        where: {
-          userId,
-          statusId: activeStatusId
+        where: { user_id,
+          status_id: activeStatusId
         },
         include: [
           {
@@ -622,7 +624,7 @@ export class SubscriptionService implements SubscriptionServiceInterface {
             model: UserSubscriptionStatus
           }
         ],
-        order: [['createdAt', 'DESC']]
+        order: [['created_at', 'DESC']]
       });
 
       return {
@@ -644,10 +646,10 @@ export class SubscriptionService implements SubscriptionServiceInterface {
   /**
    * Get subscription features
    */
-  public async getSubscriptionFeatures(subscriptionId: number): Promise<ApiResponse<SubscriptionFeature[]>> {
+  public async getSubscriptionFeatures(subscription_id: number): Promise<ApiResponse<SubscriptionFeature[]>> {
     try {
       const features = await SubscriptionFeature.findAll({
-        where: { subscriptionId },
+        where: { subscription_id: subscription_id },
         order: [['slug', 'ASC']]
       });
 
@@ -670,14 +672,14 @@ export class SubscriptionService implements SubscriptionServiceInterface {
   /**
    * Add subscription feature
    */
-  public async addSubscriptionFeature(subscriptionId: number, featureData: { slug: string; value: string }): Promise<ApiResponse<SubscriptionFeature>> {
+  public async addSubscriptionFeature(subscription_id: number, featureData: { slug: string; value: string }): Promise<ApiResponse<SubscriptionFeature>> {
     try {
-      this.logger.info('Adding subscription feature', { subscriptionId, slug: featureData.slug });
+      this.logger.info('Adding subscription feature', { subscription_id, slug: featureData.slug });
 
       // Check if feature with same slug already exists for this subscription
       const existingFeature = await SubscriptionFeature.findOne({
         where: {
-          subscriptionId,
+          subscription_id,
           slug: featureData.slug
         }
       });
@@ -692,7 +694,7 @@ export class SubscriptionService implements SubscriptionServiceInterface {
       // Create subscription feature
       const feature = await SubscriptionFeature.create({
         slug: featureData.slug,
-        subscriptionId,
+        subscription_id,
         value: featureData.value
       });
 
@@ -792,12 +794,12 @@ export class SubscriptionService implements SubscriptionServiceInterface {
     try {
       const totalSubscriptions = await Subscription.count();
       const activeSubscriptions = await Subscription.count({
-        where: { statusId: await this.getStatusIdBySlug('active') }
+        where: { subscription_status_id: await this.getStatusIdBySlug('active') }
       });
 
       const totalUserSubscriptions = await UserSubscription.count();
       const activeUserSubscriptions = await UserSubscription.count({
-        where: { statusId: await this.getUserSubscriptionStatusIdBySlug('active') }
+        where: { status_id: await this.getUserSubscriptionStatusIdBySlug('active') }
       });
 
       const stats = {
@@ -826,18 +828,16 @@ export class SubscriptionService implements SubscriptionServiceInterface {
   /**
    * Get user subscription statistics
    */
-  public async getUserSubscriptionStats(userId: number): Promise<ApiResponse<any>> {
+  public async getUserSubscriptionStats(user_id: number): Promise<ApiResponse<any>> {
     try {
-      const totalUserSubscriptions = await UserSubscription.count({ where: { userId } });
+      const totalUserSubscriptions = await UserSubscription.count({ where: { user_id } });
       const activeUserSubscriptions = await UserSubscription.count({
-        where: {
-          userId,
-          statusId: await this.getUserSubscriptionStatusIdBySlug('active')
+        where: { user_id,
+          status_id: await this.getUserSubscriptionStatusIdBySlug('active')
         }
       });
 
-      const stats = {
-        userId,
+      const stats = { user_id: user_id,
         totalUserSubscriptions,
         activeUserSubscriptions
       };
@@ -861,10 +861,10 @@ export class SubscriptionService implements SubscriptionServiceInterface {
   /**
    * Validate user subscription access
    */
-  public async validateUserSubscriptionAccess(userSubscriptionId: number, userId: number): Promise<boolean> {
+  public async validateUserSubscriptionAccess(userSubscriptionId: number, user_id: number): Promise<boolean> {
     try {
       const userSubscription = await UserSubscription.findOne({
-        where: { id: userSubscriptionId, userId }
+        where: { id: userSubscriptionId, user_id: user_id }
       });
 
       return !!userSubscription;

@@ -52,11 +52,11 @@ export class SendMessageJobService implements SendMessageJobServiceInterface {
    */
   public async createJob(jobData: CreateSendMessageJobRequest): Promise<ApiResponse<SendMessageJob>> {
     try {
-      this.logger.info('Creating send message job', { statusId: jobData.statusId });
+      this.logger.info('Creating send message job', { status_id: jobData.statusId });
 
       // Create job
       const job = await SendMessageJob.create({
-        statusId: jobData.statusId,
+        send_messages_jobs_status_id: jobData.statusId,
         log: jobData.log
       });
 
@@ -125,14 +125,14 @@ export class SendMessageJobService implements SendMessageJobServiceInterface {
       const page = pagination.page || 1;
       const limit = pagination.limit || 10;
       const offset = (page - 1) * limit;
-      const sortBy = pagination.sortBy || 'createdAt';
+      const sortBy = pagination.sortBy || 'created_at';
       const sortOrder = pagination.sortOrder || 'DESC';
 
       // Build where clause
       const whereClause: any = {};
       
       if (filters.status) {
-        whereClause.statusId = await this.getStatusIdBySlug(filters.status);
+        whereClause.status_id = await this.getStatusIdBySlug(filters.status);
       }
 
       if (filters.dateFrom && filters.dateTo) {
@@ -267,10 +267,10 @@ export class SendMessageJobService implements SendMessageJobServiceInterface {
       const limit = pagination.limit || 10;
       const offset = (page - 1) * limit;
 
-      const statusId = await this.getStatusIdBySlug(statusSlug);
+      const send_messages_jobs_status_id = await this.getStatusIdBySlug(statusSlug);
 
       const { count, rows } = await SendMessageJob.findAndCountAll({
-        where: { statusId },
+        where: { send_messages_jobs_status_id: send_messages_jobs_status_id },
         include: [
           {
             model: SendMessageJobStatus
@@ -278,7 +278,7 @@ export class SendMessageJobService implements SendMessageJobServiceInterface {
         ],
         limit,
         offset,
-        order: [['createdAt', 'DESC']]
+        order: [['created_at', 'DESC']]
       });
 
       const totalPages = Math.ceil(count / limit);
@@ -327,10 +327,10 @@ export class SendMessageJobService implements SendMessageJobServiceInterface {
         };
       }
 
-      const statusId = await this.getStatusIdBySlug(statusSlug);
+      const send_messages_jobs_status_id = await this.getStatusIdBySlug(statusSlug);
 
       // Update job status and log
-      const updateData: any = { statusId };
+      const updateData: any = { send_messages_jobs_status_id };
       if (log) {
         updateData.log = log;
       }
@@ -363,17 +363,13 @@ export class SendMessageJobService implements SendMessageJobServiceInterface {
   public async getJobStats(): Promise<ApiResponse<any>> {
     try {
       const totalJobs = await SendMessageJob.count();
-      const pendingJobs = await SendMessageJob.count({
-        where: { statusId: await this.getStatusIdBySlug('pending') }
+      const pendingJobs = await SendMessageJob.count({ where: { send_messages_jobs_status_id: await this.getStatusIdBySlug('pending') }
       });
-      const processingJobs = await SendMessageJob.count({
-        where: { statusId: await this.getStatusIdBySlug('processing') }
+      const processingJobs = await SendMessageJob.count({ where: { send_messages_jobs_status_id: await this.getStatusIdBySlug('processing') }
       });
-      const completedJobs = await SendMessageJob.count({
-        where: { statusId: await this.getStatusIdBySlug('completed') }
+      const completedJobs = await SendMessageJob.count({ where: { send_messages_jobs_status_id: await this.getStatusIdBySlug('completed') }
       });
-      const failedJobs = await SendMessageJob.count({
-        where: { statusId: await this.getStatusIdBySlug('failed') }
+      const failedJobs = await SendMessageJob.count({ where: { send_messages_jobs_status_id: await this.getStatusIdBySlug('failed') }
       });
 
       const stats = {
@@ -406,14 +402,14 @@ export class SendMessageJobService implements SendMessageJobServiceInterface {
   public async getJobStatsByStatus(): Promise<ApiResponse<any>> {
     try {
       const statusStats = await SendMessageJob.findAll({
-        attributes: ['statusId'],
+        attributes: ['status_id'],
         include: [
           {
             model: SendMessageJobStatus,
             attributes: ['slug', 'description']
           }
         ],
-        group: ['statusId'],
+        group: ['status_id'],
         raw: false
       });
 
@@ -462,7 +458,7 @@ export class SendMessageJobService implements SendMessageJobServiceInterface {
         ],
         limit,
         offset,
-        order: [['createdAt', 'DESC']]
+        order: [['created_at', 'DESC']]
       });
 
       const totalPages = Math.ceil(count / limit);
@@ -507,7 +503,7 @@ export class SendMessageJobService implements SendMessageJobServiceInterface {
 
       const { count, rows } = await SendMessageJob.findAndCountAll({
         where: {
-          createdAt: {
+          created_at: {
             [Op.between]: [new Date(dateFrom), new Date(dateTo)]
           }
         },
@@ -518,7 +514,7 @@ export class SendMessageJobService implements SendMessageJobServiceInterface {
         ],
         limit,
         offset,
-        order: [['createdAt', 'DESC']]
+        order: [['created_at', 'DESC']]
       });
 
       const totalPages = Math.ceil(count / limit);
@@ -570,7 +566,7 @@ export class SendMessageJobService implements SendMessageJobServiceInterface {
       // Update job status to cancelled
       const cancelledStatusId = await this.getStatusIdBySlug('cancelled');
       await job.update({ 
-        statusId: cancelledStatusId,
+        send_messages_jobs_status_id: cancelledStatusId,
         log: {
           ...job.log,
           cancelledAt: new Date().toISOString(),
@@ -616,7 +612,7 @@ export class SendMessageJobService implements SendMessageJobServiceInterface {
       // Update job status to pending for retry
       const pendingStatusId = await this.getStatusIdBySlug('pending');
       await job.update({ 
-        statusId: pendingStatusId,
+        send_messages_jobs_status_id: pendingStatusId,
         log: {
           ...job.log,
           retriedAt: new Date().toISOString(),
@@ -676,24 +672,24 @@ export class SendMessageJobService implements SendMessageJobServiceInterface {
   /**
    * Get jobs with filters
    */
-  public async getJobs(page: number = 1, limit: number = 10, statusId?: number, userId?: number): Promise<PaginatedResponse<SendMessageJob>> {
+  public async getJobs(page: number = 1, limit: number = 10, status_id?: number, user_id?: number): Promise<PaginatedResponse<SendMessageJob>> {
     try {
       const offset = (page - 1) * limit;
       const whereClause: any = {};
 
-      if (statusId) {
-        whereClause.statusId = statusId;
+      if (status_id) {
+        whereClause.send_messages_jobs_status_id = status_id;
       }
 
-      if (userId) {
-        whereClause.userId = userId;
+      if (user_id) {
+        whereClause.user_id = user_id;
       }
 
       const { count, rows } = await SendMessageJob.findAndCountAll({
         where: whereClause,
         limit,
         offset,
-        order: [['createdAt', 'DESC']],
+        order: [['created_at', 'DESC']],
         include: [
           {
             model: SendMessageJobStatus,
@@ -747,7 +743,7 @@ export class SendMessageJobService implements SendMessageJobServiceInterface {
 
       const runningStatusId = await this.getStatusIdBySlug('running');
       await job.update({ 
-        statusId: runningStatusId
+        send_messages_jobs_status_id: runningStatusId
       });
 
       return {
@@ -779,7 +775,7 @@ export class SendMessageJobService implements SendMessageJobServiceInterface {
       }
 
       const pausedStatusId = await this.getStatusIdBySlug('paused');
-      await job.update({ statusId: pausedStatusId });
+      await job.update({ send_messages_jobs_status_id: pausedStatusId });
 
       return {
         success: true,
@@ -810,7 +806,7 @@ export class SendMessageJobService implements SendMessageJobServiceInterface {
       }
 
       const runningStatusId = await this.getStatusIdBySlug('running');
-      await job.update({ statusId: runningStatusId });
+      await job.update({ send_messages_jobs_status_id: runningStatusId });
 
       return {
         success: true,

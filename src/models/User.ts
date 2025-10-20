@@ -7,14 +7,14 @@ interface UserAttributes {
   name: string;
   email: string;
   password: string;
-  statusId: number;
-  freeTrial: boolean;
-  createdAt?: Date;
-  updatedAt?: Date;
+  status_id: number;
+  free_trial: boolean;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 // User creation attributes (optional fields for creation)
-interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
+interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'created_at' | 'updated_at'> {}
 
 // User model class
 class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
@@ -22,14 +22,14 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   public name!: string;
   public email!: string;
   public password!: string;
-  public statusId!: number;
-  public freeTrial!: boolean;
+  public status_id!: number;
+  public free_trial!: boolean;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 
   // Associations will be defined later
   public UserStatus?: any;
-  public UserRoles?: any[];
+  public Roles?: any[];
   public Tokens?: any[];
   public UserPreferences?: any[];
   public UserSubscriptions?: any[];
@@ -92,25 +92,25 @@ User.init(
         len: [6, 200],
       },
     },
-    statusId: {
+    status_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: 'user_statuses',
+        model: 'user_status',
         key: 'id',
       },
     },
-    freeTrial: {
+    free_trial: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: true,
     },
-    createdAt: {
+    created_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
-    updatedAt: {
+    updated_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
@@ -126,10 +126,10 @@ User.init(
         fields: ['email'],
       },
       {
-        fields: ['statusId'],
+        fields: ['status_id'],
       },
       {
-        fields: ['freeTrial'],
+        fields: ['free_trial'],
       },
     ],
   }

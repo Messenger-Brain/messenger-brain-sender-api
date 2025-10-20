@@ -4,18 +4,18 @@ import { sequelize } from '../config/sequelize';
 // BrowserContext attributes interface
 interface BrowserContextAttributes {
   id: number;
-  statusId: number;
-  createdAt?: Date;
-  updatedAt?: Date;
+  status_id: number;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 // BrowserContext creation attributes
-interface BrowserContextCreationAttributes extends Optional<BrowserContextAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
+interface BrowserContextCreationAttributes extends Optional<BrowserContextAttributes, 'id' | 'created_at' | 'updated_at'> {}
 
 // BrowserContext model class
 class BrowserContext extends Model<BrowserContextAttributes, BrowserContextCreationAttributes> implements BrowserContextAttributes {
   public id!: number;
-  public statusId!: number;
+  public status_id!: number;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 
@@ -37,7 +37,7 @@ BrowserContext.init(
       autoIncrement: true,
       primaryKey: true,
     },
-    statusId: {
+    status_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
@@ -45,12 +45,12 @@ BrowserContext.init(
         key: 'id',
       },
     },
-    createdAt: {
+    created_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
-    updatedAt: {
+    updated_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
@@ -62,7 +62,7 @@ BrowserContext.init(
     timestamps: true,
     indexes: [
       {
-        fields: ['statusId'],
+        fields: ['status_id'],
       },
     ],
   }

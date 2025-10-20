@@ -16,18 +16,18 @@ import {
 
 export interface MessageServiceInterface {
   createMessage(messageData: CreateMessageRequest): Promise<ApiResponse<Message>>;
-  getMessageById(messageId: number, userId: number): Promise<ApiResponse<Message>>;
+  getMessageById(messageId: number, user_id: number): Promise<ApiResponse<Message>>;
   getAllMessages(pagination?: PaginationQuery, filters?: FilterQuery): Promise<PaginatedResponse<Message>>;
-  updateMessage(messageId: number, userId: number, messageData: UpdateMessageRequest): Promise<ApiResponse<Message>>;
-  deleteMessage(messageId: number, userId: number): Promise<ApiResponse<void>>;
-  getMessagesBySession(sessionId: number, userId: number, pagination?: PaginationQuery): Promise<PaginatedResponse<Message>>;
+  updateMessage(messageId: number, user_id: number, messageData: UpdateMessageRequest): Promise<ApiResponse<Message>>;
+  deleteMessage(messageId: number, user_id: number): Promise<ApiResponse<void>>;
+  getMessagesBySession(sessionId: number, user_id: number, pagination?: PaginationQuery): Promise<PaginatedResponse<Message>>;
   getMessagesByStatus(statusSlug: string, pagination?: PaginationQuery): Promise<PaginatedResponse<Message>>;
-  getMessagesByUser(userId: number, pagination?: PaginationQuery): Promise<PaginatedResponse<Message>>;
-  getMessageStats(userId: number): Promise<ApiResponse<any>>;
-  getMessageStatsBySession(sessionId: number, userId: number): Promise<ApiResponse<any>>;
-  searchMessages(searchTerm: string, userId: number, pagination?: PaginationQuery): Promise<PaginatedResponse<Message>>;
-  getMessagesByDateRange(userId: number, dateFrom: string, dateTo: string, pagination?: PaginationQuery): Promise<PaginatedResponse<Message>>;
-  validateMessageOwnership(messageId: number, userId: number): Promise<boolean>;
+  getMessagesByUser(user_id: number, pagination?: PaginationQuery): Promise<PaginatedResponse<Message>>;
+  getMessageStats(user_id: number): Promise<ApiResponse<any>>;
+  getMessageStatsBySession(sessionId: number, user_id: number): Promise<ApiResponse<any>>;
+  searchMessages(searchTerm: string, user_id: number, pagination?: PaginationQuery): Promise<PaginatedResponse<Message>>;
+  getMessagesByDateRange(user_id: number, dateFrom: string, dateTo: string, pagination?: PaginationQuery): Promise<PaginatedResponse<Message>>;
+  validateMessageOwnership(messageId: number, user_id: number): Promise<boolean>;
 }
 
 export class MessageService implements MessageServiceInterface {
@@ -69,16 +69,16 @@ export class MessageService implements MessageServiceInterface {
       // Create message
       const message = await Message.create({
         remoteJid: messageData.remoteJid,
-        whatsappSessionId: messageData.whatsappSessionId,
-        statusId: messageData.statusId,
-        sentAt: messageData.sentAt || new Date(),
+        whatsapp_session_id: messageData.whatsappSessionId,
+        message_session_status_id: messageData.statusId,
+        sent_at: messageData.sentAt || new Date(),
         key: messageData.key,
         message: messageData.message,
         result: messageData.result
       });
 
       // Get message with relations
-      const messageWithRelations = await this.getMessageById(message.id, session.userId);
+      const messageWithRelations = await this.getMessageById(message.id, session.user_id);
 
       this.logger.info('Message created successfully', { messageId: message.id });
 
@@ -101,14 +101,14 @@ export class MessageService implements MessageServiceInterface {
   /**
    * Get message by ID
    */
-  public async getMessageById(messageId: number, userId: number): Promise<ApiResponse<Message>> {
+  public async getMessageById(messageId: number, user_id: number): Promise<ApiResponse<Message>> {
     try {
       const message = await Message.findOne({
         where: { id: messageId },
         include: [
           {
             model: WhatsAppSession,
-            where: { userId },
+            where: { user_id: user_id },
             include: [{ model: User }]
           },
           {
@@ -148,7 +148,7 @@ export class MessageService implements MessageServiceInterface {
       const page = pagination.page || 1;
       const limit = pagination.limit || 10;
       const offset = (page - 1) * limit;
-      const sortBy = pagination.sortBy || 'sentAt';
+      const sortBy = pagination.sortBy || 'sent_at';
       const sortOrder = pagination.sortOrder || 'DESC';
 
       // Build where clause
@@ -159,15 +159,15 @@ export class MessageService implements MessageServiceInterface {
       }
 
       if (filters.status) {
-        whereClause.statusId = await this.getStatusIdBySlug(filters.status);
+        whereClause.status_id = await this.getStatusIdBySlug(filters.status);
       }
 
       if (filters.userId) {
-        whereClause['$WhatsAppSession.userId$'] = filters.userId;
+        whereClause['$WhatsAppSession.user_id$'] = filters.userId;
       }
 
       if (filters.dateFrom && filters.dateTo) {
-        whereClause.sentAt = {
+        whereClause.sent_at = {
           [Op.between]: [new Date(filters.dateFrom), new Date(filters.dateTo)]
         };
       }
@@ -223,12 +223,12 @@ export class MessageService implements MessageServiceInterface {
   /**
    * Update message
    */
-  public async updateMessage(messageId: number, userId: number, messageData: UpdateMessageRequest): Promise<ApiResponse<Message>> {
+  public async updateMessage(messageId: number, user_id: number, messageData: UpdateMessageRequest): Promise<ApiResponse<Message>> {
     try {
-      this.logger.info('Updating message', { messageId, userId });
+      this.logger.info('Updating message', { messageId, user_id: user_id });
 
       // Validate ownership
-      const ownershipValid = await this.validateMessageOwnership(messageId, userId);
+      const ownershipValid = await this.validateMessageOwnership(messageId, user_id);
       if (!ownershipValid) {
         return {
           success: false,
@@ -247,7 +247,7 @@ export class MessageService implements MessageServiceInterface {
       // Update message
       await message.update(messageData);
 
-      const updatedMessage = await this.getMessageById(messageId, userId);
+      const updatedMessage = await this.getMessageById(messageId, user_id);
 
       this.logger.info('Message updated successfully', { messageId });
 
@@ -270,12 +270,12 @@ export class MessageService implements MessageServiceInterface {
   /**
    * Delete message
    */
-  public async deleteMessage(messageId: number, userId: number): Promise<ApiResponse<void>> {
+  public async deleteMessage(messageId: number, user_id: number): Promise<ApiResponse<void>> {
     try {
-      this.logger.info('Deleting message', { messageId, userId });
+      this.logger.info('Deleting message', { messageId, user_id: user_id });
 
       // Validate ownership
-      const ownershipValid = await this.validateMessageOwnership(messageId, userId);
+      const ownershipValid = await this.validateMessageOwnership(messageId, user_id);
       if (!ownershipValid) {
         return {
           success: false,
@@ -314,11 +314,11 @@ export class MessageService implements MessageServiceInterface {
   /**
    * Get messages by session
    */
-  public async getMessagesBySession(sessionId: number, userId: number, pagination: PaginationQuery = {}): Promise<PaginatedResponse<Message>> {
+  public async getMessagesBySession(sessionId: number, user_id: number, pagination: PaginationQuery = {}): Promise<PaginatedResponse<Message>> {
     try {
       // Validate session ownership
       const session = await WhatsAppSession.findOne({
-        where: { id: sessionId, userId }
+        where: { id: sessionId, user_id: user_id }
       });
 
       if (!session) {
@@ -338,11 +338,11 @@ export class MessageService implements MessageServiceInterface {
       const page = pagination.page || 1;
       const limit = pagination.limit || 10;
       const offset = (page - 1) * limit;
-      const sortBy = pagination.sortBy || 'sentAt';
+      const sortBy = pagination.sortBy || 'sent_at';
       const sortOrder = pagination.sortOrder || 'DESC';
 
       const { count, rows } = await Message.findAndCountAll({
-        where: { whatsappSessionId: sessionId },
+        where: { whatsapp_session_id: sessionId },
         include: [
           {
             model: WhatsAppSession,
@@ -400,7 +400,7 @@ export class MessageService implements MessageServiceInterface {
       const statusId = await this.getStatusIdBySlug(statusSlug);
 
       const { count, rows } = await Message.findAndCountAll({
-        where: { statusId },
+        where: { message_session_status_id: statusId },
         include: [
           {
             model: WhatsAppSession,
@@ -412,7 +412,7 @@ export class MessageService implements MessageServiceInterface {
         ],
         limit,
         offset,
-        order: [['sentAt', 'DESC']]
+        order: [['sent_at', 'DESC']]
       });
 
       const totalPages = Math.ceil(count / limit);
@@ -449,7 +449,7 @@ export class MessageService implements MessageServiceInterface {
   /**
    * Get messages by user
    */
-  public async getMessagesByUser(userId: number, pagination: PaginationQuery = {}): Promise<PaginatedResponse<Message>> {
+  public async getMessagesByUser(user_id: number, pagination: PaginationQuery = {}): Promise<PaginatedResponse<Message>> {
     try {
       const page = pagination.page || 1;
       const limit = pagination.limit || 10;
@@ -459,7 +459,7 @@ export class MessageService implements MessageServiceInterface {
         include: [
           {
             model: WhatsAppSession,
-            where: { userId },
+            where: { user_id: user_id },
             include: [{ model: User }]
           },
           {
@@ -468,7 +468,7 @@ export class MessageService implements MessageServiceInterface {
         ],
         limit,
         offset,
-        order: [['sentAt', 'DESC']]
+        order: [['sent_at', 'DESC']]
       });
 
       const totalPages = Math.ceil(count / limit);
@@ -505,13 +505,13 @@ export class MessageService implements MessageServiceInterface {
   /**
    * Get message statistics for user
    */
-  public async getMessageStats(userId: number): Promise<ApiResponse<any>> {
+  public async getMessageStats(user_id: number): Promise<ApiResponse<any>> {
     try {
       const totalMessages = await Message.count({
         include: [
           {
             model: WhatsAppSession,
-            where: { userId }
+            where: { user_id: user_id }
           }
         ]
       });
@@ -520,11 +520,11 @@ export class MessageService implements MessageServiceInterface {
         include: [
           {
             model: WhatsAppSession,
-            where: { userId }
+            where: { user_id: user_id }
           }
         ],
         where: {
-          sentAt: {
+          sent_at: {
             [Op.gte]: new Date(new Date().setHours(0, 0, 0, 0))
           }
         }
@@ -534,18 +534,17 @@ export class MessageService implements MessageServiceInterface {
         include: [
           {
             model: WhatsAppSession,
-            where: { userId }
+            where: { user_id: user_id }
           }
         ],
         where: {
-          sentAt: {
+          sent_at: {
             [Op.gte]: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
           }
         }
       });
 
-      const stats = {
-        userId,
+      const stats = { user_id: user_id,
         totalMessages,
         messagesToday,
         messagesThisWeek
@@ -570,11 +569,11 @@ export class MessageService implements MessageServiceInterface {
   /**
    * Get message statistics by session
    */
-  public async getMessageStatsBySession(sessionId: number, userId: number): Promise<ApiResponse<any>> {
+  public async getMessageStatsBySession(sessionId: number, user_id: number): Promise<ApiResponse<any>> {
     try {
       // Validate session ownership
       const session = await WhatsAppSession.findOne({
-        where: { id: sessionId, userId }
+        where: { id: sessionId, user_id: user_id }
       });
 
       if (!session) {
@@ -585,13 +584,13 @@ export class MessageService implements MessageServiceInterface {
       }
 
       const totalMessages = await Message.count({
-        where: { whatsappSessionId: sessionId }
+        where: { whatsapp_session_id: sessionId }
       });
 
       const messagesToday = await Message.count({
         where: {
-          whatsappSessionId: sessionId,
-          sentAt: {
+          whatsapp_session_id: sessionId,
+          sent_at: {
             [Op.gte]: new Date(new Date().setHours(0, 0, 0, 0))
           }
         }
@@ -601,7 +600,7 @@ export class MessageService implements MessageServiceInterface {
         sessionId,
         totalMessages,
         messagesToday,
-        createdAt: session.createdAt
+        created_at: session.createdAt
       };
 
       return {
@@ -623,7 +622,7 @@ export class MessageService implements MessageServiceInterface {
   /**
    * Search messages
    */
-  public async searchMessages(searchTerm: string, userId: number, pagination: PaginationQuery = {}): Promise<PaginatedResponse<Message>> {
+  public async searchMessages(searchTerm: string, user_id: number, pagination: PaginationQuery = {}): Promise<PaginatedResponse<Message>> {
     try {
       const page = pagination.page || 1;
       const limit = pagination.limit || 10;
@@ -636,7 +635,7 @@ export class MessageService implements MessageServiceInterface {
         include: [
           {
             model: WhatsAppSession,
-            where: { userId },
+            where: { user_id: user_id },
             include: [{ model: User }]
           },
           {
@@ -645,7 +644,7 @@ export class MessageService implements MessageServiceInterface {
         ],
         limit,
         offset,
-        order: [['sentAt', 'DESC']]
+        order: [['sent_at', 'DESC']]
       });
 
       const totalPages = Math.ceil(count / limit);
@@ -682,7 +681,7 @@ export class MessageService implements MessageServiceInterface {
   /**
    * Get messages by date range
    */
-  public async getMessagesByDateRange(userId: number, dateFrom: string, dateTo: string, pagination: PaginationQuery = {}): Promise<PaginatedResponse<Message>> {
+  public async getMessagesByDateRange(user_id: number, dateFrom: string, dateTo: string, pagination: PaginationQuery = {}): Promise<PaginatedResponse<Message>> {
     try {
       const page = pagination.page || 1;
       const limit = pagination.limit || 10;
@@ -690,14 +689,14 @@ export class MessageService implements MessageServiceInterface {
 
       const { count, rows } = await Message.findAndCountAll({
         where: {
-          sentAt: {
+          sent_at: {
             [Op.between]: [new Date(dateFrom), new Date(dateTo)]
           }
         },
         include: [
           {
             model: WhatsAppSession,
-            where: { userId },
+            where: { user_id: user_id },
             include: [{ model: User }]
           },
           {
@@ -706,7 +705,7 @@ export class MessageService implements MessageServiceInterface {
         ],
         limit,
         offset,
-        order: [['sentAt', 'DESC']]
+        order: [['sent_at', 'DESC']]
       });
 
       const totalPages = Math.ceil(count / limit);
@@ -766,7 +765,7 @@ export class MessageService implements MessageServiceInterface {
       for (const contact of contacts) {
         try {
           const messageData = {
-            remoteJid: contact.phoneNumber,
+            remoteJid: contact.phone_number,
             whatsappSessionId: sessionId,
             statusId: await this.getStatusIdBySlug('pending'),
             sentAt: new Date(),
@@ -779,14 +778,14 @@ export class MessageService implements MessageServiceInterface {
           if (result.success) {
             successful++;
             results.push({
-              phoneNumber: contact.phoneNumber,
+              phone_number: contact.phone_number,
               status: 'success',
               messageId: result.data?.id
             });
           } else {
             failed++;
             results.push({
-              phoneNumber: contact.phoneNumber,
+              phone_number: contact.phone_number,
               status: 'failed',
               error: result.message
             });
@@ -799,7 +798,7 @@ export class MessageService implements MessageServiceInterface {
         } catch (error) {
           failed++;
           results.push({
-            phoneNumber: contact.phoneNumber,
+            phone_number: contact.phone_number,
             status: 'failed',
             error: error instanceof Error ? error.message : 'Unknown error'
           });
@@ -829,14 +828,14 @@ export class MessageService implements MessageServiceInterface {
   /**
    * Validate message ownership
    */
-  public async validateMessageOwnership(messageId: number, userId: number): Promise<boolean> {
+  public async validateMessageOwnership(messageId: number, user_id: number): Promise<boolean> {
     try {
       const message = await Message.findOne({
         where: { id: messageId },
         include: [
           {
             model: WhatsAppSession,
-            where: { userId }
+            where: { user_id: user_id }
           }
         ]
       });

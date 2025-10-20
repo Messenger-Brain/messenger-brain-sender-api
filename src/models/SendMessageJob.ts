@@ -4,22 +4,22 @@ import { sequelize } from '../config/sequelize';
 // SendMessageJob attributes interface
 interface SendMessageJobAttributes {
   id: number;
-  statusId: number;
+  send_messages_jobs_status_id: number;
   log?: any; // JSON data
-  createdAt?: Date;
-  updatedAt?: Date;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 // SendMessageJob creation attributes
-interface SendMessageJobCreationAttributes extends Optional<SendMessageJobAttributes, 'id' | 'log' | 'createdAt' | 'updatedAt'> {}
+interface SendMessageJobCreationAttributes extends Optional<SendMessageJobAttributes, 'id' | 'log' | 'created_at' | 'updated_at'> {}
 
 // SendMessageJob model class
 class SendMessageJob extends Model<SendMessageJobAttributes, SendMessageJobCreationAttributes> implements SendMessageJobAttributes {
   public id!: number;
-  public statusId!: number;
+  public send_messages_jobs_status_id!: number;
   public log?: any;
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+  public readonly created_at!: Date;
+  public readonly updated_at!: Date;
 
   // Associations
   public SendMessageJobStatus?: any;
@@ -38,7 +38,7 @@ SendMessageJob.init(
       autoIncrement: true,
       primaryKey: true,
     },
-    statusId: {
+    send_messages_jobs_status_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
@@ -50,12 +50,12 @@ SendMessageJob.init(
       type: DataTypes.JSON,
       allowNull: true,
     },
-    createdAt: {
+    created_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
-    updatedAt: {
+    updated_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
@@ -67,10 +67,10 @@ SendMessageJob.init(
     timestamps: true,
     indexes: [
       {
-        fields: ['statusId'],
+        fields: ['send_messages_jobs_status_id'],
       },
       {
-        fields: ['createdAt'],
+        fields: ['created_at'],
       },
     ],
   }

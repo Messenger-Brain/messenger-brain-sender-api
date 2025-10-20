@@ -16,7 +16,7 @@ export interface AuthenticatedRequest extends Request {
     email: string;
     role: string;
     status: string;
-    freeTrial: boolean;
+    free_trial: boolean;
   };
   tokenType?: 'jwt' | 'personal_token';
 }
@@ -36,6 +36,46 @@ export class AuthMiddleware {
       AuthMiddleware.instance = new AuthMiddleware();
     }
     return AuthMiddleware.instance;
+  }
+
+  /**
+   * Get status ID by slug
+   */
+  private async getStatusIdBySlug(slug: string): Promise<number | null> {
+    try {
+      const status = await UserStatus.findOne({ where: { slug } });
+      return status ? status.id : null;
+    } catch (error) {
+      this.logger.error('Failed to get status ID by slug', error);
+      return null;
+    }
+  }
+
+  /**
+   * Check if token user status is active
+   */
+  private async isTokenUserActive(token: any): Promise<boolean> {
+    try {
+      if (!token.User) return false;
+      const activeStatusId = await this.getStatusIdBySlug('active');
+      return activeStatusId ? token.User.status_id === activeStatusId : false;
+    } catch (error) {
+      this.logger.error('Failed to check token user status', error);
+      return false;
+    }
+  }
+
+  /**
+   * Check if user status is active
+   */
+  private async isUserActive(user: User): Promise<boolean> {
+    try {
+      const activeStatusId = await this.getStatusIdBySlug('active');
+      return activeStatusId ? user.status_id === activeStatusId : false;
+    } catch (error) {
+      this.logger.error('Failed to check user status', error);
+      return false;
+    }
   }
 
   /**
@@ -107,7 +147,7 @@ export class AuthMiddleware {
       });
 
       if (!user) {
-        this.logger.warn('JWT authentication failed - user not found', { userId: decoded.id });
+        this.logger.warn('JWT authentication failed - user not found', { user_id: decoded.id });
         res.status(401).json({
           success: false,
           message: 'Invalid token',
@@ -117,8 +157,9 @@ export class AuthMiddleware {
       }
 
       // Check user status
-      if (user.statusId !== 1) { // Assuming 1 is active status
-        this.logger.warn('JWT authentication failed - user inactive', { userId: user.id, statusId: user.statusId });
+      const isActive = await this.isUserActive(user);
+      if (!isActive) {
+        this.logger.warn('JWT authentication failed - user inactive', { user_id: user.id, status_id: user.status_id });
         res.status(401).json({
           success: false,
           message: 'Account is inactive',
@@ -131,9 +172,9 @@ export class AuthMiddleware {
       req.user = {
         id: user.id,
         email: user.email,
-        role: user.UserRoles?.[0]?.Role?.slug || 'user',
+        role: user.Roles?.[0]?.slug || 'user',
         status: user.UserStatus?.slug || 'active',
-        freeTrial: user.freeTrial
+        free_trial: user.free_trial
       };
       req.tokenType = 'jwt';
 
@@ -203,8 +244,9 @@ export class AuthMiddleware {
       }
 
       // Check user status
-      if (token.User?.statusId !== 1) { // Assuming 1 is active status
-        this.logger.warn('Personal token authentication failed - user inactive', { userId: token.User?.id, statusId: token.User?.statusId });
+      const isActive = await this.isTokenUserActive(token);
+      if (!isActive) {
+        this.logger.warn('Personal token authentication failed - user inactive', { user_id: token.User?.id, status_id: token.User?.status_id });
         res.status(401).json({
           success: false,
           message: 'Account is inactive',
@@ -219,7 +261,7 @@ export class AuthMiddleware {
         email: token.User!.email,
         role: token.User!.UserRoles?.[0]?.Role?.slug || 'user',
         status: token.User!.UserStatus?.slug || 'active',
-        freeTrial: token.User!.freeTrial
+        free_trial: token.User!.free_trial
       };
       req.tokenType = 'personal_token';
 
@@ -290,7 +332,7 @@ export class AuthMiddleware {
     }
 
     if (req.user.role !== 'admin') {
-      this.logger.warn('Admin access denied', { userId: req.user.id, role: req.user.role });
+      this.logger.warn('Admin access denied', { user_id: req.user.id, role: req.user.role });
       res.status(403).json({
         success: false,
         message: 'Admin access required',
@@ -318,7 +360,7 @@ export class AuthMiddleware {
 
       if (req.user.role !== requiredRole) {
         this.logger.warn('Role access denied', { 
-          userId: req.user.id, 
+          user_id: req.user.id, 
           userRole: req.user.role, 
           requiredRole 
         });
@@ -348,7 +390,7 @@ export class AuthMiddleware {
     }
 
     if (req.user.status !== 'active') {
-      this.logger.warn('Inactive user access denied', { userId: req.user.id, status: req.user.status });
+      this.logger.warn('Inactive user access denied', { user_id: req.user.id, status: req.user.status });
       res.status(403).json({
         success: false,
         message: 'Active account required',
@@ -378,7 +420,7 @@ export class AuthMiddleware {
       
       if (req.user.role !== 'admin' && req.user.id !== resourceUserId) {
         this.logger.warn('Ownership validation failed', { 
-          userId: req.user.id, 
+          user_id: req.user.id, 
           resourceUserId,
           role: req.user.role 
         });

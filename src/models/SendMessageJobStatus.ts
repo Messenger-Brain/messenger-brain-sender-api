@@ -6,12 +6,12 @@ interface SendMessageJobStatusAttributes {
   id: number;
   slug: string;
   description: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 // SendMessageJobStatus creation attributes
-interface SendMessageJobStatusCreationAttributes extends Optional<SendMessageJobStatusAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
+interface SendMessageJobStatusCreationAttributes extends Optional<SendMessageJobStatusAttributes, 'id' | 'created_at' | 'updated_at'> {}
 
 // SendMessageJobStatus model class
 class SendMessageJobStatus extends Model<SendMessageJobStatusAttributes, SendMessageJobStatusCreationAttributes> implements SendMessageJobStatusAttributes {
@@ -56,12 +56,12 @@ SendMessageJobStatus.init(
         len: [5, 500],
       },
     },
-    createdAt: {
+    created_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
-    updatedAt: {
+    updated_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,

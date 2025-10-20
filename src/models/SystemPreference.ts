@@ -7,12 +7,12 @@ interface SystemPreferenceAttributes {
   slug: string;
   name: string;
   description: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 // SystemPreference creation attributes
-interface SystemPreferenceCreationAttributes extends Optional<SystemPreferenceAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
+interface SystemPreferenceCreationAttributes extends Optional<SystemPreferenceAttributes, 'id' | 'created_at' | 'updated_at'> {}
 
 // SystemPreference model class
 class SystemPreference extends Model<SystemPreferenceAttributes, SystemPreferenceCreationAttributes> implements SystemPreferenceAttributes {
@@ -66,12 +66,12 @@ SystemPreference.init(
         len: [5, 500],
       },
     },
-    createdAt: {
+    created_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
-    updatedAt: {
+    updated_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,

@@ -19,22 +19,22 @@ import {
 
 export interface UserPreferenceServiceInterface {
   createUserPreference(preferenceData: CreateUserPreferenceRequest): Promise<ApiResponse<UserPreference>>;
-  getUserPreferenceById(preferenceId: number, userId: number): Promise<ApiResponse<UserPreference>>;
-  getUserPreferences(userId: number, pagination?: PaginationQuery): Promise<PaginatedResponse<UserPreference>>;
-  updateUserPreference(preferenceId: number, userId: number, preferenceData: UpdateUserPreferenceRequest): Promise<ApiResponse<UserPreference>>;
-  deleteUserPreference(preferenceId: number, userId: number): Promise<ApiResponse<void>>;
-  getUserPreferencesByUser(userId: number, pagination?: PaginationQuery): Promise<PaginatedResponse<UserPreference>>;
-  getUserPreferencesBySystemPreference(systemPreferenceId: number, pagination?: PaginationQuery): Promise<PaginatedResponse<UserPreference>>;
+  getUserPreferenceById(preferenceId: number, user_id: number): Promise<ApiResponse<UserPreference>>;
+  getUserPreferences(user_id: number, pagination?: PaginationQuery): Promise<PaginatedResponse<UserPreference>>;
+  updateUserPreference(preferenceId: number, user_id: number, preferenceData: UpdateUserPreferenceRequest): Promise<ApiResponse<UserPreference>>;
+  deleteUserPreference(preferenceId: number, user_id: number): Promise<ApiResponse<void>>;
+  getUserPreferencesByUser(user_id: number, pagination?: PaginationQuery): Promise<PaginatedResponse<UserPreference>>;
+  getUserPreferencesBySystemPreference(system_preference_id: number, pagination?: PaginationQuery): Promise<PaginatedResponse<UserPreference>>;
   getUserPreferencesByStatus(statusSlug: string, pagination?: PaginationQuery): Promise<PaginatedResponse<UserPreference>>;
   createUserPreferenceOption(optionData: CreateUserPreferenceOptionRequest): Promise<ApiResponse<UserPreferenceOption>>;
   getUserPreferenceOptionById(optionId: number): Promise<ApiResponse<UserPreferenceOption>>;
-  getUserPreferenceOptions(userPreferenceId: number, pagination?: PaginationQuery): Promise<PaginatedResponse<UserPreferenceOption>>;
+  getUserPreferenceOptions(user_preferences_id: number, pagination?: PaginationQuery): Promise<PaginatedResponse<UserPreferenceOption>>;
   updateUserPreferenceOption(optionId: number, optionData: UpdateUserPreferenceOptionRequest): Promise<ApiResponse<UserPreferenceOption>>;
   deleteUserPreferenceOption(optionId: number): Promise<ApiResponse<void>>;
   getSystemPreferences(): Promise<ApiResponse<SystemPreference[]>>;
-  getSystemPreferenceById(systemPreferenceId: number): Promise<ApiResponse<SystemPreference>>;
-  getUserPreferenceStats(userId: number): Promise<ApiResponse<any>>;
-  validateUserPreferenceAccess(preferenceId: number, userId: number): Promise<boolean>;
+  getSystemPreferenceById(system_preference_id: number): Promise<ApiResponse<SystemPreference>>;
+  getUserPreferenceStats(user_id: number): Promise<ApiResponse<any>>;
+  validateUserPreferenceAccess(preferenceId: number, user_id: number): Promise<boolean>;
 }
 
 export class UserPreferenceService implements UserPreferenceServiceInterface {
@@ -59,13 +59,13 @@ export class UserPreferenceService implements UserPreferenceServiceInterface {
    */
   public async createUserPreference(preferenceData: CreateUserPreferenceRequest): Promise<ApiResponse<UserPreference>> {
     try {
-      this.logger.info('Creating user preference', { userId: preferenceData.userId, systemPreferenceId: preferenceData.systemPreferenceId });
+      this.logger.info('Creating user preference', { user_id: preferenceData.userId, system_preference_id: preferenceData.systemPreferenceId });
 
       // Check if user already has this system preference
       const existingPreference = await UserPreference.findOne({
         where: {
-          userId: preferenceData.userId,
-          systemPreferenceId: preferenceData.systemPreferenceId
+          user_id: preferenceData.userId,
+          system_preference_id: preferenceData.systemPreferenceId
         }
       });
 
@@ -78,9 +78,9 @@ export class UserPreferenceService implements UserPreferenceServiceInterface {
 
       // Create user preference
       const userPreference = await UserPreference.create({
-        userId: preferenceData.userId,
-        systemPreferenceId: preferenceData.systemPreferenceId,
-        statusId: preferenceData.statusId
+        user_id: preferenceData.userId,
+        system_preference_id: preferenceData.systemPreferenceId,
+        status_id: preferenceData.statusId
       });
 
       // Get user preference with relations
@@ -107,10 +107,10 @@ export class UserPreferenceService implements UserPreferenceServiceInterface {
   /**
    * Get user preference by ID
    */
-  public async getUserPreferenceById(preferenceId: number, userId: number): Promise<ApiResponse<UserPreference>> {
+  public async getUserPreferenceById(preferenceId: number, user_id: number): Promise<ApiResponse<UserPreference>> {
     try {
       const userPreference = await UserPreference.findOne({
-        where: { id: preferenceId, userId },
+        where: { id: preferenceId, user_id: user_id },
         include: [
           {
             model: User
@@ -153,16 +153,16 @@ export class UserPreferenceService implements UserPreferenceServiceInterface {
   /**
    * Get all user preferences with pagination
    */
-  public async getUserPreferences(userId: number, pagination: PaginationQuery = {}): Promise<PaginatedResponse<UserPreference>> {
+  public async getUserPreferences(user_id: number, pagination: PaginationQuery = {}): Promise<PaginatedResponse<UserPreference>> {
     try {
       const page = pagination.page || 1;
       const limit = pagination.limit || 10;
       const offset = (page - 1) * limit;
-      const sortBy = pagination.sortBy || 'createdAt';
+      const sortBy = pagination.sortBy || 'created_at';
       const sortOrder = pagination.sortOrder || 'DESC';
 
       const { count, rows } = await UserPreference.findAndCountAll({
-        where: { userId },
+        where: { user_id },
         include: [
           {
             model: User
@@ -216,12 +216,12 @@ export class UserPreferenceService implements UserPreferenceServiceInterface {
   /**
    * Update user preference
    */
-  public async updateUserPreference(preferenceId: number, userId: number, preferenceData: UpdateUserPreferenceRequest): Promise<ApiResponse<UserPreference>> {
+  public async updateUserPreference(preferenceId: number, user_id: number, preferenceData: UpdateUserPreferenceRequest): Promise<ApiResponse<UserPreference>> {
     try {
-      this.logger.info('Updating user preference', { preferenceId, userId });
+      this.logger.info('Updating user preference', { preferenceId, user_id: user_id });
 
       // Validate access
-      const accessValid = await this.validateUserPreferenceAccess(preferenceId, userId);
+      const accessValid = await this.validateUserPreferenceAccess(preferenceId, user_id);
       if (!accessValid) {
         return {
           success: false,
@@ -238,9 +238,12 @@ export class UserPreferenceService implements UserPreferenceServiceInterface {
       }
 
       // Update user preference
-      await userPreference.update(preferenceData);
+      await userPreference.update({
+        ...(preferenceData.systemPreferenceId !== undefined && { system_preference_id: preferenceData.systemPreferenceId }),
+        ...(preferenceData.statusId !== undefined && { status_id: preferenceData.statusId })
+      });
 
-      const updatedUserPreference = await this.getUserPreferenceById(preferenceId, userId);
+      const updatedUserPreference = await this.getUserPreferenceById(preferenceId, user_id);
 
       this.logger.info('User preference updated successfully', { preferenceId });
 
@@ -263,12 +266,12 @@ export class UserPreferenceService implements UserPreferenceServiceInterface {
   /**
    * Delete user preference
    */
-  public async deleteUserPreference(preferenceId: number, userId: number): Promise<ApiResponse<void>> {
+  public async deleteUserPreference(preferenceId: number, user_id: number): Promise<ApiResponse<void>> {
     try {
-      this.logger.info('Deleting user preference', { preferenceId, userId });
+      this.logger.info('Deleting user preference', { preferenceId, user_id: user_id });
 
       // Validate access
-      const accessValid = await this.validateUserPreferenceAccess(preferenceId, userId);
+      const accessValid = await this.validateUserPreferenceAccess(preferenceId, user_id);
       if (!accessValid) {
         return {
           success: false,
@@ -285,7 +288,7 @@ export class UserPreferenceService implements UserPreferenceServiceInterface {
       }
 
       // Delete user preference options first
-      await UserPreferenceOption.destroy({ where: { userPreferenceId: preferenceId } });
+      await UserPreferenceOption.destroy({ where: { user_preferences_id: preferenceId } });
 
       // Delete user preference
       await userPreference.destroy();
@@ -310,14 +313,14 @@ export class UserPreferenceService implements UserPreferenceServiceInterface {
   /**
    * Get user preferences by user
    */
-  public async getUserPreferencesByUser(userId: number, pagination: PaginationQuery = {}): Promise<PaginatedResponse<UserPreference>> {
+  public async getUserPreferencesByUser(user_id: number, pagination: PaginationQuery = {}): Promise<PaginatedResponse<UserPreference>> {
     try {
       const page = pagination.page || 1;
       const limit = pagination.limit || 10;
       const offset = (page - 1) * limit;
 
       const { count, rows } = await UserPreference.findAndCountAll({
-        where: { userId },
+        where: { user_id },
         include: [
           {
             model: User
@@ -334,7 +337,7 @@ export class UserPreferenceService implements UserPreferenceServiceInterface {
         ],
         limit,
         offset,
-        order: [['createdAt', 'DESC']]
+        order: [['created_at', 'DESC']]
       });
 
       const totalPages = Math.ceil(count / limit);
@@ -371,14 +374,14 @@ export class UserPreferenceService implements UserPreferenceServiceInterface {
   /**
    * Get user preferences by system preference
    */
-  public async getUserPreferencesBySystemPreference(systemPreferenceId: number, pagination: PaginationQuery = {}): Promise<PaginatedResponse<UserPreference>> {
+  public async getUserPreferencesBySystemPreference(system_preference_id: number, pagination: PaginationQuery = {}): Promise<PaginatedResponse<UserPreference>> {
     try {
       const page = pagination.page || 1;
       const limit = pagination.limit || 10;
       const offset = (page - 1) * limit;
 
       const { count, rows } = await UserPreference.findAndCountAll({
-        where: { systemPreferenceId },
+        where: { system_preference_id: system_preference_id },
         include: [
           {
             model: User
@@ -395,7 +398,7 @@ export class UserPreferenceService implements UserPreferenceServiceInterface {
         ],
         limit,
         offset,
-        order: [['createdAt', 'DESC']]
+        order: [['created_at', 'DESC']]
       });
 
       const totalPages = Math.ceil(count / limit);
@@ -441,7 +444,7 @@ export class UserPreferenceService implements UserPreferenceServiceInterface {
       const statusId = await this.getStatusIdBySlug(statusSlug);
 
       const { count, rows } = await UserPreference.findAndCountAll({
-        where: { statusId },
+        where: { status_id: statusId },
         include: [
           {
             model: User
@@ -458,7 +461,7 @@ export class UserPreferenceService implements UserPreferenceServiceInterface {
         ],
         limit,
         offset,
-        order: [['createdAt', 'DESC']]
+        order: [['created_at', 'DESC']]
       });
 
       const totalPages = Math.ceil(count / limit);
@@ -497,12 +500,12 @@ export class UserPreferenceService implements UserPreferenceServiceInterface {
    */
   public async createUserPreferenceOption(optionData: CreateUserPreferenceOptionRequest): Promise<ApiResponse<UserPreferenceOption>> {
     try {
-      this.logger.info('Creating user preference option', { userPreferenceId: optionData.userPreferenceId, slug: optionData.slug });
+      this.logger.info('Creating user preference option', { user_preferences_id: optionData.userPreferenceId, slug: optionData.slug });
 
       // Check if option with same slug already exists for this preference
       const existingOption = await UserPreferenceOption.findOne({
         where: {
-          userPreferenceId: optionData.userPreferenceId,
+          user_preferences_id: optionData.userPreferenceId,
           slug: optionData.slug
         }
       });
@@ -516,7 +519,7 @@ export class UserPreferenceService implements UserPreferenceServiceInterface {
 
       // Create user preference option
       const option = await UserPreferenceOption.create({
-        userPreferenceId: optionData.userPreferenceId,
+        user_preferences_id: optionData.userPreferenceId,
         slug: optionData.slug,
         value: optionData.value
       });
@@ -578,14 +581,14 @@ export class UserPreferenceService implements UserPreferenceServiceInterface {
   /**
    * Get user preference options
    */
-  public async getUserPreferenceOptions(userPreferenceId: number, pagination: PaginationQuery = {}): Promise<PaginatedResponse<UserPreferenceOption>> {
+  public async getUserPreferenceOptions(user_preferences_id: number, pagination: PaginationQuery = {}): Promise<PaginatedResponse<UserPreferenceOption>> {
     try {
       const page = pagination.page || 1;
       const limit = pagination.limit || 10;
       const offset = (page - 1) * limit;
 
       const { count, rows } = await UserPreferenceOption.findAndCountAll({
-        where: { userPreferenceId },
+        where: { user_preferences_id },
         include: [
           {
             model: UserPreference
@@ -726,9 +729,9 @@ export class UserPreferenceService implements UserPreferenceServiceInterface {
   /**
    * Get system preference by ID
    */
-  public async getSystemPreferenceById(systemPreferenceId: number): Promise<ApiResponse<SystemPreference>> {
+  public async getSystemPreferenceById(system_preference_id: number): Promise<ApiResponse<SystemPreference>> {
     try {
-      const systemPreference = await SystemPreference.findByPk(systemPreferenceId);
+      const systemPreference = await SystemPreference.findByPk(system_preference_id);
 
       if (!systemPreference) {
         return {
@@ -756,13 +759,12 @@ export class UserPreferenceService implements UserPreferenceServiceInterface {
   /**
    * Get user preference statistics
    */
-  public async getUserPreferenceStats(userId: number): Promise<ApiResponse<any>> {
+  public async getUserPreferenceStats(user_id: number): Promise<ApiResponse<any>> {
     try {
-      const totalPreferences = await UserPreference.count({ where: { userId } });
+      const totalPreferences = await UserPreference.count({ where: { user_id: user_id } });
       const activePreferences = await UserPreference.count({
-        where: {
-          userId,
-          statusId: await this.getStatusIdBySlug('active')
+        where: { user_id: user_id,
+          status_id: await this.getStatusIdBySlug('active')
         }
       });
 
@@ -770,13 +772,12 @@ export class UserPreferenceService implements UserPreferenceServiceInterface {
         include: [
           {
             model: UserPreference,
-            where: { userId }
+            where: { user_id: user_id }
           }
         ]
       });
 
-      const stats = {
-        userId,
+      const stats = { user_id: user_id,
         totalPreferences,
         activePreferences,
         totalOptions
@@ -801,10 +802,10 @@ export class UserPreferenceService implements UserPreferenceServiceInterface {
   /**
    * Validate user preference access
    */
-  public async validateUserPreferenceAccess(preferenceId: number, userId: number): Promise<boolean> {
+  public async validateUserPreferenceAccess(preferenceId: number, user_id: number): Promise<boolean> {
     try {
       const userPreference = await UserPreference.findOne({
-        where: { id: preferenceId, userId }
+        where: { id: preferenceId, user_id: user_id }
       });
 
       return !!userPreference;
