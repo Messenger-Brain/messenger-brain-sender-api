@@ -118,11 +118,8 @@ export class App {
       setupAssociations();
       Logger.info('Model associations setup completed');
 
-      // Sync database (only in development)
-      if (this.configService.isDevelopment()) {
-        await sequelize.sync({ alter: true });
-        Logger.info('Database synchronized');
-      }
+      // Database schema is managed by migrations, no sync needed
+      Logger.info('Database schema managed by migrations');
 
     } catch (error) {
       Logger.error('Failed to initialize application', error);
