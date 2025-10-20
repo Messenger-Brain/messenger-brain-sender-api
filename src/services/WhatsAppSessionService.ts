@@ -82,17 +82,21 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
 
       // Create session
       const createData: any = {
+        name: sessionData.name,
         user_id: sessionData.userId,
         phone_number: sessionData.phoneNumber,
         status_id: sessionData.statusId,
         account_protection: sessionData.accountProtection,
         log_messages: sessionData.logMessages,
-        webhook_enabled: sessionData.webhookEnabled,
-        browser_context_id: sessionData.browserContextId
+        webhook_enabled: sessionData.webhookEnabled
       };
 
       if (sessionData.webhookUrl) {
-        createData.webhookUrl = sessionData.webhookUrl;
+        createData.webhook_url = sessionData.webhookUrl;
+      }
+
+      if (sessionData.browserContextId) {
+        createData.browser_context_id = sessionData.browserContextId;
       }
 
       const session = await WhatsAppSession.create(createData);
@@ -367,8 +371,8 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
         log_messages: session.log_messages,
         webhook_enabled: session.webhook_enabled,
         messageCount,
-        created_at: session.createdAt,
-        updated_at: session.updatedAt
+        created_at: session.created_at,
+        updated_at: session.updated_at
       };
 
       return {
@@ -570,7 +574,7 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
         sessionId,
         totalMessages,
         messagesToday,
-        created_at: (await WhatsAppSession.findByPk(sessionId))?.createdAt
+        created_at: (await WhatsAppSession.findByPk(sessionId))?.created_at
       };
 
       return {

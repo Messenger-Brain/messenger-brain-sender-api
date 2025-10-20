@@ -4,6 +4,7 @@ import { sequelize } from '../config/sequelize';
 // WhatsAppSession attributes interface
 interface WhatsAppSessionAttributes {
   id: number;
+  name: string;
   user_id: number;
   phone_number: string;
   status_id: number;
@@ -22,6 +23,7 @@ interface WhatsAppSessionCreationAttributes extends Optional<WhatsAppSessionAttr
 // WhatsAppSession model class
 class WhatsAppSession extends Model<WhatsAppSessionAttributes, WhatsAppSessionCreationAttributes> implements WhatsAppSessionAttributes {
   public id!: number;
+  public name!: string;
   public user_id!: number;
   public phone_number!: string;
   public status_id!: number;
@@ -30,8 +32,8 @@ class WhatsAppSession extends Model<WhatsAppSessionAttributes, WhatsAppSessionCr
   public webhook_url?: string;
   public webhook_enabled!: boolean;
   public browser_context_id?: number;
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+  public readonly created_at!: Date;
+  public readonly updated_at!: Date;
 
   // Associations
   public User?: any;
@@ -52,6 +54,14 @@ WhatsAppSession.init(
       type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true,
+    },
+    name: {
+      type: DataTypes.STRING(200),
+      allowNull: false,
+      validate: {
+        notEmpty: true,
+        len: [2, 200],
+      },
     },
     user_id: {
       type: DataTypes.INTEGER,

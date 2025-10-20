@@ -600,7 +600,7 @@ export class MessageService implements MessageServiceInterface {
         sessionId,
         totalMessages,
         messagesToday,
-        created_at: session.createdAt
+        created_at: session.created_at
       };
 
       return {

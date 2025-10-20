@@ -212,6 +212,46 @@ router.post('/',
 
 /**
  * @swagger
+ * /api/users/stats:
+ *   get:
+ *     summary: Get user statistics
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User statistics retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     totalUsers:
+ *                       type: number
+ *                     activeUsers:
+ *                       type: number
+ *                     inactiveUsers:
+ *                       type: number
+ *                     freeTrialUsers:
+ *                       type: number
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/stats',
+  authMiddleware.authenticate,
+  authMiddleware.requireAdmin,
+  userController.getUserStats
+);
+
+/**
+ * @swagger
  * /api/users/{id}:
  *   get:
  *     summary: Get user by ID
@@ -490,46 +530,6 @@ router.get('/:id/activities',
   authMiddleware.authenticate,
   validationMiddleware.validateParams(idParamSchema),
   userController.getUserActivities
-);
-
-/**
- * @swagger
- * /api/users/stats:
- *   get:
- *     summary: Get user statistics
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: User statistics retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: object
- *                   properties:
- *                     totalUsers:
- *                       type: number
- *                     activeUsers:
- *                       type: number
- *                     inactiveUsers:
- *                       type: number
- *                     freeTrialUsers:
- *                       type: number
- *       401:
- *         description: Unauthorized
- *       500:
- *         description: Internal server error
- */
-router.get('/stats',
-  authMiddleware.authenticate,
-  authMiddleware.requireAdmin,
-  userController.getUserStats
 );
 
 export default router;

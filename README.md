@@ -72,13 +72,18 @@ npm run db:setup
 ## Ejecución
 
 ```bash
-# Desarrollo
+# Desarrollo (recomendado - limpia puerto y auto-reload)
+npm run dev:clean
+
+# Desarrollo (solo si el puerto está libre)
 npm run dev
 
 # Producción
 npm run build
 npm start
 ```
+
+> **💡 Recomendación:** Usa siempre `npm run dev:clean` para evitar problemas de puerto ocupado. Este comando mata cualquier proceso previo en el puerto 9000 y luego inicia el servidor con hot-reload automático.
 
 ## Comandos de Base de Datos
 

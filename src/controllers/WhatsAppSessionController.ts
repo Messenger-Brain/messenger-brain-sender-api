@@ -104,7 +104,12 @@ export class WhatsAppSessionController {
         phone_number: req.body.phoneNumber 
       });
 
-      const result = await this.sessionService.createSession(req.body);
+      const sessionData = {
+        ...req.body,
+        userId
+      };
+
+      const result = await this.sessionService.createSession(sessionData);
 
       if (result.success) {
         this.loggingMiddleware.logWhatsAppEvent('session_created', result.data?.id || 0, userId, true, {

@@ -137,11 +137,13 @@ export class AuthMiddleware {
       const user = await User.findByPk(decoded.id, {
         include: [
           {
-            model: UserRole,
-            include: [{ model: Role }]
+            model: Role,
+            as: 'Roles',
+            through: { attributes: [] }
           },
           {
-            model: UserStatus
+            model: UserStatus,
+            as: 'UserStatus'
           }
         ]
       });
@@ -216,17 +218,21 @@ export class AuthMiddleware {
         include: [
           {
             model: TokenType,
+            as: 'TokenType',
             where: { slug: 'personal_token' }
           },
           {
             model: User,
+            as: 'User',
             include: [
               {
-                model: UserRole,
-                include: [{ model: Role }]
+                model: Role,
+                as: 'Roles',
+                through: { attributes: [] }
               },
               {
-                model: UserStatus
+                model: UserStatus,
+                as: 'UserStatus'
               }
             ]
           }
@@ -259,7 +265,7 @@ export class AuthMiddleware {
       req.user = {
         id: token.User!.id,
         email: token.User!.email,
-        role: token.User!.UserRoles?.[0]?.Role?.slug || 'user',
+        role: token.User!.Roles?.[0]?.slug || 'user',
         status: token.User!.UserStatus?.slug || 'active',
         free_trial: token.User!.free_trial
       };

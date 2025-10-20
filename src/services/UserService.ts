@@ -746,7 +746,10 @@ export class UserService implements UserServiceInterface {
 
       // Get role distribution
       const roleStats = await UserRole.findAll({
-        include: [{ model: Role }],
+        include: [{ 
+          model: Role,
+          as: 'Role'
+        }],
         attributes: ['role_id'],
         group: ['role_id']
       });

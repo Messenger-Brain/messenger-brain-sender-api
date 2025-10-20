@@ -154,3 +154,6 @@ uploads/
 # Database files
 *.sqlite
 *.db
+
+# Security tokens (for development only)
+ADMIN_TOKEN.txt

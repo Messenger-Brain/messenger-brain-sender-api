@@ -129,6 +129,7 @@ export interface FilterQuery {
 
 // WhatsApp Session interfaces
 export interface CreateWhatsAppSessionRequest {
+  name: string;
   userId: number;
   phoneNumber: string;
   statusId: number;
