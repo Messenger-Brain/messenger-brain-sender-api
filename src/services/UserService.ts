@@ -177,11 +177,13 @@ export class UserService implements UserServiceInterface {
         where: whereClause,
         include: [
           {
-            model: UserRole,
-            include: [{ model: Role }]
+            model: Role,
+            as: 'Roles',
+            through: { attributes: [] }
           },
           {
-            model: UserStatus
+            model: UserStatus,
+            as: 'UserStatus'
           }
         ],
         limit,

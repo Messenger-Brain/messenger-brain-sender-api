@@ -174,10 +174,12 @@ export class SubscriptionService implements SubscriptionServiceInterface {
         where: whereClause,
         include: [
           {
-            model: SubscriptionStatus
+            model: SubscriptionStatus,
+            as: 'SubscriptionStatus'
           },
           {
-            model: SubscriptionFeature
+            model: SubscriptionFeature,
+            as: 'SubscriptionFeatures'
           }
         ],
         limit,
@@ -306,10 +308,12 @@ export class SubscriptionService implements SubscriptionServiceInterface {
         where: { subscription_status_id: activeStatusId },
         include: [
           {
-            model: SubscriptionStatus
+            model: SubscriptionStatus,
+            as: 'SubscriptionStatus'
           },
           {
-            model: SubscriptionFeature
+            model: SubscriptionFeature,
+            as: 'SubscriptionFeatures'
           }
         ],
         order: [['price', 'ASC']]

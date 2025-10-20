@@ -80,22 +80,33 @@ export class AuthService implements AuthServiceInterface {
       // Hash password
       const hashedPassword = await User.hashPassword(userData.password);
 
+      // Get default status if not provided
+      let statusId = userData.statusId;
+      if (!statusId) {
+        const activeStatus = await UserStatus.findOne({ where: { slug: 'active' } });
+        statusId = activeStatus ? activeStatus.id : 1;
+      }
+
       // Create user
       const user = await User.create({
         name: userData.name,
         email: userData.email,
         password: hashedPassword,
-        status_id: userData.statusId,
+        status_id: statusId,
         free_trial: userData.freeTrial ?? false
       });
 
-      // Assign role if provided
-      if (userData.roleId) {
-        await UserRole.create({
-          user_id: user.id,
-          role_id: userData.roleId
-        });
+      // Assign role (default to 'user' if not provided)
+      let roleId = userData.roleId;
+      if (!roleId) {
+        const userRole = await Role.findOne({ where: { slug: 'user' } });
+        roleId = userRole ? userRole.id : 2; // 2 is usually 'user' role
       }
+      
+      await UserRole.create({
+        user_id: user.id,
+        role_id: roleId
+      });
 
       // Get user with relations
       const userWithRelations = await this.getUserById(user.id);

@@ -113,21 +113,23 @@ export class UserController {
    */
   public getUsers = async (req: Request, res: Response): Promise<void> => {
     try {
-      const filters = {
+      const pagination = {
         page: parseInt(req.query.page as string) || 1,
         limit: parseInt(req.query.limit as string) || 10,
+        sortBy: (req.query.sortBy as string) || 'created_at',
+        sortOrder: ((req.query.sortOrder as string) || 'DESC') as 'ASC' | 'DESC'
+      };
+
+      const filters = {
         search: req.query.search as string,
         role_id: req.query.role_id ? parseInt(req.query.role_id as string) : undefined,
         status_id: req.query.status_id ? parseInt(req.query.status_id as string) : undefined,
-        free_trial: req.query.free_trial ? req.query.free_trial === 'true' : undefined,
-        sortBy: (req.query.sortBy as string) || 'created_at',
-        sortOrder: (req.query.sortOrder as string) || 'DESC'
+        free_trial: req.query.free_trial ? req.query.free_trial === 'true' : undefined
       };
 
-      this.logger.info('User list request', { filters });
+      this.logger.info('User list request', { pagination, filters });
 
-      // TODO: Implement get users functionality
-      const result = { success: true, data: { users: [], total: 0, totalPages: 0, currentPage: filters.page } };
+      const result = await this.userService.getAllUsers(pagination, filters);
 
       if (result.success) {
         res.status(200).json(result);
