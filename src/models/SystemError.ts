@@ -55,6 +55,7 @@ SystemError.init(
     sequelize,
     tableName: 'system_errors',
     timestamps: true,
+    underscored: true,
     indexes: [
       {
         fields: ['created_at'],

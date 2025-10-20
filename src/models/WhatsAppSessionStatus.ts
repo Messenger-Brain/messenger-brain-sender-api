@@ -71,6 +71,7 @@ WhatsAppSessionStatus.init(
     sequelize,
     tableName: 'whatsapp_sessions_status',
     timestamps: true,
+    underscored: true,
     indexes: [
       {
         unique: true,

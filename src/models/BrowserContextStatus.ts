@@ -71,6 +71,7 @@ BrowserContextStatus.init(
     sequelize,
     tableName: 'browser_context_status',
     timestamps: true,
+    underscored: true,
     indexes: [
       {
         unique: true,

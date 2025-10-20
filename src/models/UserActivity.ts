@@ -80,6 +80,7 @@ UserActivity.init(
     sequelize,
     tableName: 'user_activity',
     timestamps: true,
+    underscored: true,
     indexes: [
       {
         fields: ['user_id'],

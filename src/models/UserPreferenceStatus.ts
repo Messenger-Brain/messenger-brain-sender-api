@@ -71,6 +71,7 @@ UserPreferenceStatus.init(
     sequelize,
     tableName: 'user_preferences_status',
     timestamps: true,
+    underscored: true,
     indexes: [
       {
         unique: true,

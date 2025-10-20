@@ -123,6 +123,7 @@ WhatsAppSession.init(
     sequelize,
     tableName: 'whatsapp_sessions',
     timestamps: true,
+    underscored: true,
     indexes: [
       {
         unique: true,

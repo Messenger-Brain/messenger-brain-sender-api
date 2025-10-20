@@ -70,6 +70,7 @@ UserRole.init(
     sequelize,
     tableName: 'user_roles',
     timestamps: true,
+    underscored: true,
     indexes: [
       {
         unique: true,

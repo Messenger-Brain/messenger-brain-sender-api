@@ -80,6 +80,7 @@ UserPreferenceOption.init(
     sequelize,
     tableName: 'user_preferences_options',
     timestamps: true,
+    underscored: true,
     indexes: [
       {
         unique: true,

@@ -60,6 +60,7 @@ BrowserContext.init(
     sequelize,
     tableName: 'browser_context',
     timestamps: true,
+    underscored: true,
     indexes: [
       {
         fields: ['status_id'],

@@ -71,6 +71,7 @@ SendMessageJobStatus.init(
     sequelize,
     tableName: 'send_messages_jobs_status',
     timestamps: true,
+    underscored: true,
     indexes: [
       {
         unique: true,

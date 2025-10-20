@@ -71,6 +71,7 @@ MessageStatus.init(
     sequelize,
     tableName: 'message_status',
     timestamps: true,
+    underscored: true,
     indexes: [
       {
         unique: true,

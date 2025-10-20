@@ -80,6 +80,7 @@ Token.init(
     sequelize,
     tableName: 'tokens',
     timestamps: true,
+    underscored: true,
     indexes: [
       {
         unique: true,

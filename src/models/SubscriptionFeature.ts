@@ -80,6 +80,7 @@ SubscriptionFeature.init(
     sequelize,
     tableName: 'subscriptions_features',
     timestamps: true,
+    underscored: true,
     indexes: [
       {
         unique: true,

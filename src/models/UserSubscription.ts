@@ -81,6 +81,7 @@ UserSubscription.init(
     sequelize,
     tableName: 'user_subscriptions',
     timestamps: true,
+    underscored: true,
     indexes: [
       {
         unique: true,

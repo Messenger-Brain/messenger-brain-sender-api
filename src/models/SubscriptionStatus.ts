@@ -71,6 +71,7 @@ SubscriptionStatus.init(
     sequelize,
     tableName: 'subscriptions_status',
     timestamps: true,
+    underscored: true,
     indexes: [
       {
         unique: true,

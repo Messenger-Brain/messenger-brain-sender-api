@@ -81,6 +81,7 @@ SystemPreference.init(
     sequelize,
     tableName: 'system_preferences',
     timestamps: true,
+    underscored: true,
     indexes: [
       {
         unique: true,

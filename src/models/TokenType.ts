@@ -71,6 +71,7 @@ TokenType.init(
     sequelize,
     tableName: 'token_types',
     timestamps: true,
+    underscored: true,
     indexes: [
       {
         unique: true,

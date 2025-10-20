@@ -105,6 +105,7 @@ Message.init(
     sequelize,
     tableName: 'messages',
     timestamps: true,
+    underscored: true,
     indexes: [
       {
         fields: ['whatsapp_session_id'],

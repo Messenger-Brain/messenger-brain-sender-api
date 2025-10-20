@@ -65,6 +65,7 @@ SendMessageJob.init(
     sequelize,
     tableName: 'send_messages_jobs',
     timestamps: true,
+    underscored: true,
     indexes: [
       {
         fields: ['send_messages_jobs_status_id'],
