@@ -1,0 +1,752 @@
+import User from '../models/User';
+import UserRole from '../models/UserRole';
+import Role from '../models/Role';
+import UserStatus from '../models/UserStatus';
+import UserActivity from '../models/UserActivity';
+import { ConfigService } from '../config/ConfigService';
+import Logger from '../utils/logger';
+import { Op } from 'sequelize';
+import { 
+  CreateUserRequest, 
+  UpdateUserRequest, 
+  PaginationQuery,
+  FilterQuery,
+  ApiResponse,
+  PaginatedResponse 
+} from '../types';
+
+export interface UserServiceInterface {
+  createUser(userData: CreateUserRequest): Promise<ApiResponse<User>>;
+  getUserById(userId: number): Promise<ApiResponse<User>>;
+  getAllUsers(pagination?: PaginationQuery, filters?: FilterQuery): Promise<PaginatedResponse<User>>;
+  updateUser(userId: number, userData: UpdateUserRequest): Promise<ApiResponse<User>>;
+  deleteUser(userId: number): Promise<ApiResponse<void>>;
+  getUserRoles(userId: number): Promise<ApiResponse<Role[]>>;
+  assignRole(userId: number, roleId: number): Promise<ApiResponse<void>>;
+  removeRole(userId: number, roleId: number): Promise<ApiResponse<void>>;
+  getUserActivities(userId: number, pagination?: PaginationQuery): Promise<PaginatedResponse<UserActivity>>;
+  logUserActivity(userId: number, slug: string, description: string): Promise<ApiResponse<void>>;
+  searchUsers(searchTerm: string, pagination?: PaginationQuery): Promise<PaginatedResponse<User>>;
+  getUsersByRole(roleSlug: string, pagination?: PaginationQuery): Promise<PaginatedResponse<User>>;
+  getUsersByStatus(statusSlug: string, pagination?: PaginationQuery): Promise<PaginatedResponse<User>>;
+  toggleUserStatus(userId: number): Promise<ApiResponse<User>>;
+  getUserStats(): Promise<ApiResponse<any>>;
+}
+
+export class UserService implements UserServiceInterface {
+  private static instance: UserService;
+  private configService: ConfigService;
+  private logger: typeof Logger;
+
+  private constructor() {
+    this.configService = ConfigService.getInstance();
+    this.logger = Logger;
+  }
+
+  public static getInstance(): UserService {
+    if (!UserService.instance) {
+      UserService.instance = new UserService();
+    }
+    return UserService.instance;
+  }
+
+  /**
+   * Create a new user
+   */
+  public async createUser(userData: CreateUserRequest): Promise<ApiResponse<User>> {
+    try {
+      this.logger.info('Creating new user', { email: userData.email });
+
+      // Check if user already exists
+      const existingUser = await User.findOne({
+        where: { email: userData.email }
+      });
+
+      if (existingUser) {
+        return {
+          success: false,
+          message: 'User with this email already exists'
+        };
+      }
+
+      // Create user
+      const user = await User.create({
+        name: userData.name,
+        email: userData.email,
+        password: userData.password,
+        statusId: userData.statusId,
+        freeTrial: userData.freeTrial ?? false
+      });
+
+      // Assign role if provided
+      if (userData.roleId) {
+        await UserRole.create({
+          userId: user.id,
+          roleId: userData.roleId
+        });
+      }
+
+      // Log activity
+      await this.logUserActivity(user.id, 'user_created', `User ${user.name} was created`);
+
+      this.logger.info('User created successfully', { userId: user.id });
+
+      return {
+        success: true,
+        message: 'User created successfully',
+        data: user
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to create user', error);
+      return {
+        success: false,
+        message: 'Failed to create user',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Get user by ID with relations
+   */
+  public async getUserById(userId: number): Promise<ApiResponse<User>> {
+    try {
+      const user = await User.findByPk(userId, {
+        include: [
+          {
+            model: UserRole,
+            include: [{ model: Role }]
+          },
+          {
+            model: UserStatus
+          }
+        ]
+      });
+
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found'
+        };
+      }
+
+      return {
+        success: true,
+        message: 'User retrieved successfully',
+        data: user
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to get user by ID', error);
+      return {
+        success: false,
+        message: 'Failed to retrieve user',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Get all users with pagination and filters
+   */
+  public async getAllUsers(pagination: PaginationQuery = {}, filters: FilterQuery = {}): Promise<PaginatedResponse<User>> {
+    try {
+      const page = pagination.page || 1;
+      const limit = pagination.limit || 10;
+      const offset = (page - 1) * limit;
+      const sortBy = pagination.sortBy || 'createdAt';
+      const sortOrder = pagination.sortOrder || 'DESC';
+
+      // Build where clause
+      const whereClause: any = {};
+      
+      if (filters.search) {
+        whereClause[Op.or] = [
+          { name: { [Op.like]: `%${filters.search}%` } },
+          { email: { [Op.like]: `%${filters.search}%` } }
+        ];
+      }
+
+      if (filters.status) {
+        whereClause.statusId = await this.getStatusIdBySlug(filters.status);
+      }
+
+      // Get users with pagination
+      const { count, rows } = await User.findAndCountAll({
+        where: whereClause,
+        include: [
+          {
+            model: UserRole,
+            include: [{ model: Role }]
+          },
+          {
+            model: UserStatus
+          }
+        ],
+        limit,
+        offset,
+        order: [[sortBy, sortOrder]]
+      });
+
+      const totalPages = Math.ceil(count / limit);
+
+      return {
+        success: true,
+        message: 'Users retrieved successfully',
+        data: rows,
+        pagination: {
+          page,
+          limit,
+          total: count,
+          totalPages
+        }
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to get all users', error);
+      return {
+        success: false,
+        message: 'Failed to retrieve users',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        data: [],
+        pagination: {
+          page: 1,
+          limit: 10,
+          total: 0,
+          totalPages: 0
+        }
+      };
+    }
+  }
+
+  /**
+   * Update user
+   */
+  public async updateUser(userId: number, userData: UpdateUserRequest): Promise<ApiResponse<User>> {
+    try {
+      this.logger.info('Updating user', { userId });
+
+      const user = await User.findByPk(userId);
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found'
+        };
+      }
+
+      // Update user
+      await user.update(userData);
+
+      // Update role if provided
+      if (userData.roleId) {
+        await UserRole.destroy({ where: { userId } });
+        await UserRole.create({ userId, roleId: userData.roleId });
+      }
+
+      // Log activity
+      await this.logUserActivity(userId, 'user_updated', `User ${user.name} was updated`);
+
+      const updatedUser = await this.getUserById(userId);
+      
+      return {
+        success: true,
+        message: 'User updated successfully',
+        data: updatedUser.data!
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to update user', error);
+      return {
+        success: false,
+        message: 'Failed to update user',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Delete user
+   */
+  public async deleteUser(userId: number): Promise<ApiResponse<void>> {
+    try {
+      this.logger.info('Deleting user', { userId });
+
+      const user = await User.findByPk(userId);
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found'
+        };
+      }
+
+      // Delete user roles first
+      await UserRole.destroy({ where: { userId } });
+
+      // Delete user activities
+      await UserActivity.destroy({ where: { userId } });
+
+      // Delete user
+      await user.destroy();
+
+      this.logger.info('User deleted successfully', { userId });
+
+      return {
+        success: true,
+        message: 'User deleted successfully'
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to delete user', error);
+      return {
+        success: false,
+        message: 'Failed to delete user',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Get user roles
+   */
+  public async getUserRoles(userId: number): Promise<ApiResponse<Role[]>> {
+    try {
+      const userRoles = await UserRole.findAll({
+        where: { userId },
+        include: [{ model: Role }]
+      });
+
+      const roles = userRoles.map((ur: any) => ur.Role).filter(Boolean);
+
+      return {
+        success: true,
+        message: 'User roles retrieved successfully',
+        data: roles as Role[]
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to get user roles', error);
+      return {
+        success: false,
+        message: 'Failed to retrieve user roles',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Assign role to user
+   */
+  public async assignRole(userId: number, roleId: number): Promise<ApiResponse<void>> {
+    try {
+      // Check if role already assigned
+      const existingRole = await UserRole.findOne({
+        where: { userId, roleId }
+      });
+
+      if (existingRole) {
+        return {
+          success: false,
+          message: 'Role already assigned to user'
+        };
+      }
+
+      await UserRole.create({ userId, roleId });
+
+      // Log activity
+      await this.logUserActivity(userId, 'role_assigned', `Role assigned to user`);
+
+      return {
+        success: true,
+        message: 'Role assigned successfully'
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to assign role', error);
+      return {
+        success: false,
+        message: 'Failed to assign role',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Remove role from user
+   */
+  public async removeRole(userId: number, roleId: number): Promise<ApiResponse<void>> {
+    try {
+      const deletedCount = await UserRole.destroy({
+        where: { userId, roleId }
+      });
+
+      if (deletedCount === 0) {
+        return {
+          success: false,
+          message: 'Role not found for user'
+        };
+      }
+
+      // Log activity
+      await this.logUserActivity(userId, 'role_removed', `Role removed from user`);
+
+      return {
+        success: true,
+        message: 'Role removed successfully'
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to remove role', error);
+      return {
+        success: false,
+        message: 'Failed to remove role',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Get user activities
+   */
+  public async getUserActivities(userId: number, pagination: PaginationQuery = {}): Promise<PaginatedResponse<UserActivity>> {
+    try {
+      const page = pagination.page || 1;
+      const limit = pagination.limit || 10;
+      const offset = (page - 1) * limit;
+      const sortBy = pagination.sortBy || 'createdAt';
+      const sortOrder = pagination.sortOrder || 'DESC';
+
+      const { count, rows } = await UserActivity.findAndCountAll({
+        where: { userId },
+        limit,
+        offset,
+        order: [[sortBy, sortOrder]]
+      });
+
+      const totalPages = Math.ceil(count / limit);
+
+      return {
+        success: true,
+        message: 'User activities retrieved successfully',
+        data: rows,
+        pagination: {
+          page,
+          limit,
+          total: count,
+          totalPages
+        }
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to get user activities', error);
+      return {
+        success: false,
+        message: 'Failed to retrieve user activities',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        data: [],
+        pagination: {
+          page: 1,
+          limit: 10,
+          total: 0,
+          totalPages: 0
+        }
+      };
+    }
+  }
+
+  /**
+   * Log user activity
+   */
+  public async logUserActivity(userId: number, slug: string, description: string): Promise<ApiResponse<void>> {
+    try {
+      await UserActivity.create({
+        userId,
+        slug,
+        description
+      });
+
+      return {
+        success: true,
+        message: 'Activity logged successfully'
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to log user activity', error);
+      return {
+        success: false,
+        message: 'Failed to log activity',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Search users
+   */
+  public async searchUsers(searchTerm: string, pagination: PaginationQuery = {}): Promise<PaginatedResponse<User>> {
+    try {
+      const page = pagination.page || 1;
+      const limit = pagination.limit || 10;
+      const offset = (page - 1) * limit;
+
+      const { count, rows } = await User.findAndCountAll({
+        where: {
+          [Op.or]: [
+            { name: { [Op.like]: `%${searchTerm}%` } },
+            { email: { [Op.like]: `%${searchTerm}%` } }
+          ]
+        },
+        include: [
+          {
+            model: UserRole,
+            include: [{ model: Role }]
+          },
+          {
+            model: UserStatus
+          }
+        ],
+        limit,
+        offset,
+        order: [['name', 'ASC']]
+      });
+
+      const totalPages = Math.ceil(count / limit);
+
+      return {
+        success: true,
+        message: 'Search completed successfully',
+        data: rows,
+        pagination: {
+          page,
+          limit,
+          total: count,
+          totalPages
+        }
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to search users', error);
+      return {
+        success: false,
+        message: 'Search failed',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        data: [],
+        pagination: {
+          page: 1,
+          limit: 10,
+          total: 0,
+          totalPages: 0
+        }
+      };
+    }
+  }
+
+  /**
+   * Get users by role
+   */
+  public async getUsersByRole(roleSlug: string, pagination: PaginationQuery = {}): Promise<PaginatedResponse<User>> {
+    try {
+      const page = pagination.page || 1;
+      const limit = pagination.limit || 10;
+      const offset = (page - 1) * limit;
+
+      const { count, rows } = await User.findAndCountAll({
+        include: [
+          {
+            model: UserRole,
+            include: [{
+              model: Role,
+              where: { slug: roleSlug }
+            }]
+          },
+          {
+            model: UserStatus
+          }
+        ],
+        limit,
+        offset,
+        order: [['name', 'ASC']]
+      });
+
+      const totalPages = Math.ceil(count / limit);
+
+      return {
+        success: true,
+        message: 'Users retrieved successfully',
+        data: rows,
+        pagination: {
+          page,
+          limit,
+          total: count,
+          totalPages
+        }
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to get users by role', error);
+      return {
+        success: false,
+        message: 'Failed to retrieve users',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        data: [],
+        pagination: {
+          page: 1,
+          limit: 10,
+          total: 0,
+          totalPages: 0
+        }
+      };
+    }
+  }
+
+  /**
+   * Get users by status
+   */
+  public async getUsersByStatus(statusSlug: string, pagination: PaginationQuery = {}): Promise<PaginatedResponse<User>> {
+    try {
+      const page = pagination.page || 1;
+      const limit = pagination.limit || 10;
+      const offset = (page - 1) * limit;
+
+      const statusId = await this.getStatusIdBySlug(statusSlug);
+
+      const { count, rows } = await User.findAndCountAll({
+        where: { statusId },
+        include: [
+          {
+            model: UserRole,
+            include: [{ model: Role }]
+          },
+          {
+            model: UserStatus
+          }
+        ],
+        limit,
+        offset,
+        order: [['name', 'ASC']]
+      });
+
+      const totalPages = Math.ceil(count / limit);
+
+      return {
+        success: true,
+        message: 'Users retrieved successfully',
+        data: rows,
+        pagination: {
+          page,
+          limit,
+          total: count,
+          totalPages
+        }
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to get users by status', error);
+      return {
+        success: false,
+        message: 'Failed to retrieve users',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        data: [],
+        pagination: {
+          page: 1,
+          limit: 10,
+          total: 0,
+          totalPages: 0
+        }
+      };
+    }
+  }
+
+  /**
+   * Toggle user status (active/inactive)
+   */
+  public async toggleUserStatus(userId: number): Promise<ApiResponse<User>> {
+    try {
+      const user = await User.findByPk(userId);
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found'
+        };
+      }
+
+      // Toggle between active (1) and inactive (2) status
+      const newStatusId = user.statusId === 1 ? 2 : 1;
+      await user.update({ statusId: newStatusId });
+
+      // Log activity
+      const statusText = newStatusId === 1 ? 'activated' : 'deactivated';
+      await this.logUserActivity(userId, 'status_toggled', `User ${statusText}`);
+
+      const updatedUser = await this.getUserById(userId);
+
+      return {
+        success: true,
+        message: `User ${statusText} successfully`,
+        data: updatedUser.data!
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to toggle user status', error);
+      return {
+        success: false,
+        message: 'Failed to toggle user status',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Get user statistics
+   */
+  public async getUserStats(): Promise<ApiResponse<any>> {
+    try {
+      const totalUsers = await User.count();
+      const activeUsers = await User.count({ where: { statusId: 1 } });
+      const inactiveUsers = await User.count({ where: { statusId: 2 } });
+      const freeTrialUsers = await User.count({ where: { freeTrial: true } });
+
+      // Get role distribution
+      const roleStats = await UserRole.findAll({
+        include: [{ model: Role }],
+        attributes: ['roleId'],
+        group: ['roleId']
+      });
+
+      const stats = {
+        totalUsers,
+        activeUsers,
+        inactiveUsers,
+        freeTrialUsers,
+        roleDistribution: roleStats.map((rs: any) => ({
+          role: rs.Role?.slug,
+          count: rs.count
+        }))
+      };
+
+      return {
+        success: true,
+        message: 'User statistics retrieved successfully',
+        data: stats
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to get user stats', error);
+      return {
+        success: false,
+        message: 'Failed to retrieve user statistics',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Helper method to get status ID by slug
+   */
+  private async getStatusIdBySlug(slug: string): Promise<number> {
+    const status = await UserStatus.findOne({ where: { slug } });
+    return status?.id || 1; // Default to active status
+  }
+}
+
+export default UserService;

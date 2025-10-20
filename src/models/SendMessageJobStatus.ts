@@ -1,0 +1,83 @@
+import { DataTypes, Model, Optional } from 'sequelize';
+import { sequelize } from '../config/sequelize';
+
+// SendMessageJobStatus attributes interface
+interface SendMessageJobStatusAttributes {
+  id: number;
+  slug: string;
+  description: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+// SendMessageJobStatus creation attributes
+interface SendMessageJobStatusCreationAttributes extends Optional<SendMessageJobStatusAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
+
+// SendMessageJobStatus model class
+class SendMessageJobStatus extends Model<SendMessageJobStatusAttributes, SendMessageJobStatusCreationAttributes> implements SendMessageJobStatusAttributes {
+  public id!: number;
+  public slug!: string;
+  public description!: string;
+  public readonly createdAt!: Date;
+  public readonly updatedAt!: Date;
+
+  // Associations
+  public SendMessageJobs?: any[];
+
+  // Instance methods
+  public override toJSON() {
+    return this.get();
+  }
+}
+
+// Initialize the model
+SendMessageJobStatus.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    slug: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+      unique: true,
+      validate: {
+        notEmpty: true,
+        len: [2, 100],
+        is: /^[a-z0-9_-]+$/i,
+      },
+    },
+    description: {
+      type: DataTypes.STRING(500),
+      allowNull: false,
+      validate: {
+        notEmpty: true,
+        len: [5, 500],
+      },
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+  },
+  {
+    sequelize,
+    tableName: 'send_messages_jobs_status',
+    timestamps: true,
+    indexes: [
+      {
+        unique: true,
+        fields: ['slug'],
+      },
+    ],
+  }
+);
+
+export default SendMessageJobStatus;
