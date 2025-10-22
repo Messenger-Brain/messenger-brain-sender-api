@@ -7,7 +7,8 @@ import {
   updateSubscriptionSchema,
   paginationSchema,
   idParamSchema,
-  createSubscriptionPlanSchema
+  createSubscriptionPlanSchema,
+  updateSubscriptionPlanSchema
 } from '../schemas/validationSchemas';
 
 const router = Router();
@@ -475,6 +476,79 @@ router.post('/plan',
   authMiddleware.requireAdmin,
   validationMiddleware.validateBody(createSubscriptionPlanSchema),
   subscriptionController.createSubscriptionPlan
+);
+
+/**
+ * @swagger
+ * /api/subscriptions/plan/{id}:
+ *   put:
+ *     summary: Update a subscription plan (Admin only)
+ *     tags: [Subscriptions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: number
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               slug:
+ *                 type: string
+ *                 minLength: 2
+ *                 maxLength: 100
+ *                 pattern: ^[a-z0-9_-]+$
+ *                 description: Unique identifier for the subscription plan (only alphanumeric, underscore and dash)
+ *               description:
+ *                 type: string
+ *                 minLength: 5
+ *                 maxLength: 500
+ *                 description: Description of the subscription plan
+ *               statusId:
+ *                 type: number
+ *                 description: Status ID of the subscription plan (1 for active)
+ *               price:
+ *                 type: number
+ *                 format: float
+ *                 minimum: 0
+ *                 description: Price of the subscription plan
+ *     responses:
+ *       200:
+ *         description: Subscription plan updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   $ref: '#/components/schemas/Subscription'
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden (Admin only)
+ *       404:
+ *         description: Subscription plan not found
+ *       500:
+ *         description: Internal server error
+ */
+router.put('/plan/:id',
+  authMiddleware.authenticate,
+  authMiddleware.requireAdmin,
+  validationMiddleware.validateParams(idParamSchema),
+  validationMiddleware.validateBody(updateSubscriptionPlanSchema),
+  subscriptionController.updateSubscriptionPlan
 );
 
 export default router;

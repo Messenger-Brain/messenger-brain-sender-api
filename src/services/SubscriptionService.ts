@@ -21,6 +21,7 @@ import {
 export interface SubscriptionServiceInterface {
   createSubscription(subscriptionData: CreateSubscriptionRequest): Promise<ApiResponse<Subscription>>;
   getSubscriptionById(subscription_id: number): Promise<ApiResponse<Subscription>>;
+  getSubscriptionBySlug(slug: string): Promise<Subscription | null>;
   getAllSubscriptions(pagination?: PaginationQuery, filters?: FilterQuery): Promise<PaginatedResponse<Subscription>>;
   updateSubscription(subscription_id: number, subscriptionData: UpdateSubscriptionRequest): Promise<ApiResponse<Subscription>>;
   deleteSubscription(subscription_id: number): Promise<ApiResponse<void>>;
@@ -227,20 +228,41 @@ export class SubscriptionService implements SubscriptionServiceInterface {
     try {
       this.logger.info('Updating subscription', { subscription_id });
 
+      // Find the subscription
       const subscription = await Subscription.findByPk(subscription_id);
+      
+      // If subscription doesn't exist, return error
       if (!subscription) {
         return {
           success: false,
           message: 'Subscription not found'
         };
       }
+      
+      if (subscriptionData.slug && subscriptionData.slug !== subscription.slug) {
+        const existingSubscription = await Subscription.findOne({
+          where: { slug: subscriptionData.slug }
+        });
 
-      // Update subscription
-      await subscription.update(subscriptionData);
+        if (existingSubscription) {
+          return {
+            success: false,
+            message: `Subscription with slug "${subscriptionData.slug}" already exists`
+          };
+        }
+      }
 
-      const updatedSubscription = await this.getSubscriptionById(subscription_id);
+      // Update existing subscription
+      await subscription.update({
+        slug: subscriptionData.slug !== undefined ? subscriptionData.slug : subscription.slug,
+        description: subscriptionData.description !== undefined ? subscriptionData.description : subscription.description,
+        subscription_status_id: subscriptionData.statusId !== undefined ? subscriptionData.statusId : subscription.subscription_status_id,
+        price: subscriptionData.price !== undefined ? subscriptionData.price : subscription.price
+      });
 
-      this.logger.info('Subscription updated successfully', { subscription_id });
+      const updatedSubscription = await this.getSubscriptionById(subscription.id);
+
+      this.logger.info('Subscription updated successfully', { subscription_id: subscription.id });
 
       return {
         success: true,
@@ -894,6 +916,30 @@ export class SubscriptionService implements SubscriptionServiceInterface {
   private async getUserSubscriptionStatusIdBySlug(slug: string): Promise<number> {
     const status = await UserSubscriptionStatus.findOne({ where: { slug } });
     return status?.id || 1; // Default to first status
+  }
+
+  /**
+   * Get subscription by slug
+   */
+  public async getSubscriptionBySlug(slug: string): Promise<Subscription | null> {
+    try {
+      return await Subscription.findOne({
+        where: { slug },
+        include: [
+          {
+            model: SubscriptionStatus,
+            as: 'SubscriptionStatus'
+          },
+          {
+            model: SubscriptionFeature,
+            as: 'SubscriptionFeatures'
+          }
+        ]
+      });
+    } catch (error) {
+      this.logger.error('Error getting subscription by slug', error);
+      return null;
+    }
   }
 }
 

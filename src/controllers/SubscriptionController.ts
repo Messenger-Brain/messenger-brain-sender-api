@@ -49,6 +49,59 @@ export class SubscriptionController {
       });
     }
   };
+  
+  /**
+   * Update subscription plan (Admin only)
+   */
+  public updateSubscriptionPlan = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const subscriptionId = parseInt((req.params.id as string) || '0');
+      const subscriptionData = {
+        slug: req.body.slug,
+        description: req.body.description,
+        statusId: req.body.statusId,
+        price: req.body.price
+      };
+      
+      // If we're updating the slug, check if it already exists
+      if (subscriptionData.slug) {
+        const existingWithSlug = await this.subscriptionService.getSubscriptionBySlug(subscriptionData.slug);
+        if (existingWithSlug && existingWithSlug.id !== subscriptionId) {
+          res.status(400).json({
+            success: false,
+            message: `A subscription with slug "${subscriptionData.slug}" already exists`
+          });
+          return;
+        }
+      }
+      
+      const result = await this.subscriptionService.updateSubscription(subscriptionId, subscriptionData);
+      
+      if (result.success) {
+        res.status(200).json(result);
+      } else {
+        // If subscription was not found, return 404
+        res.status(result.message === 'Subscription not found' ? 404 : 400).json(result);
+      }
+    } catch (error) {
+      this.logger.error('Error updating subscription plan', error);
+      
+      // Handle unique constraint violation error
+      if (error instanceof Error && error.name === 'SequelizeUniqueConstraintError') {
+        res.status(400).json({
+          success: false,
+          message: 'A subscription with this slug already exists'
+        });
+        return;
+      }
+      
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  };
 
   /**
    * Get all available subscriptions
