@@ -166,7 +166,8 @@ export class UserService implements UserServiceInterface {
       if (filters.search) {
         whereClause[Op.or] = [
           { name: { [Op.like]: `%${filters.search}%` } },
-          { email: { [Op.like]: `%${filters.search}%` } }
+          { email: { [Op.like]: `%${filters.search}%` } },
+          { phone_number: { [Op.like]: `%${filters.search}%` } }
         ];
       }
 
@@ -194,6 +195,11 @@ export class UserService implements UserServiceInterface {
       });
 
       const totalPages = Math.ceil(count / limit);
+
+      // If a search was provided and there are no matches, throw so the catch block returns the empty response
+      if (filters.search && count === 0) {
+        throw new Error('No users found matching search criteria');
+      }
 
       // Map DB rows to the public API shape
       const users = rows.map((u: any) => ({
