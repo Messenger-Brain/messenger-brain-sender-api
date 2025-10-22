@@ -172,7 +172,29 @@ export class UserService implements UserServiceInterface {
       }
 
       if (filters.status) {
-        whereClause.status_id = await this.getStatusIdBySlug(filters.status);
+        // Convert status slug to id; if not found, return a clear error immediately
+        const statusId = await this.getStatusIdBySlug(filters.status);
+        if (!statusId) {
+          return {
+            success: false,
+            message: 'Failed to retrieve users',
+            error: `No users found with status '${filters.status}'`,
+            data: {
+              users: [],
+              pagination: {
+                currentPage: page,
+                totalPages: 0,
+                totalItems: 0,
+                itemsPerPage: limit
+              }
+            }
+          };
+        }
+
+        whereClause.status_id = statusId;
+      } else if ((filters as any).status_id) {
+        // Accept numeric status_id as fallback
+        whereClause.status_id = (filters as any).status_id;
       }
 
       // Build role filter if provided. When a role filter is present we make the include required
@@ -205,11 +227,12 @@ export class UserService implements UserServiceInterface {
 
       const totalPages = Math.ceil(count / limit);
 
-      // If a search was provided and there are no matches, throw so the catch block returns the empty response
-      if ((filters.search || filters.role) && count === 0) {
-        const errorMessage = filters.role
-          ? `No users found with role '${filters.role}'`
-          : 'No users found matching search criteria';
+      // If a search/role/status filter was provided and there are no matches, return a specific error
+      if ((filters.search || filters.role || filters.status) && count === 0) {
+        let errorMessage = 'No users found matching the provided filter(s)';
+        if (filters.role) errorMessage = `No users found with role '${filters.role}'`;
+        else if (filters.status) errorMessage = `No users found with status '${filters.status}'`;
+        else if (filters.search) errorMessage = 'No users found matching search criteria';
         throw new Error(errorMessage);
       }
 

@@ -116,7 +116,13 @@ const authMiddleware = AuthMiddleware.getInstance();
  *       - in: query
  *         name: statusId
  *         schema:
- *           type: number
+ *           type: number 
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [active, inactive, suspended]
+ *           description: Filter users by status slug
  *       - in: query
  *         name: freeTrial
  *         schema:
