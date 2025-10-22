@@ -113,10 +113,12 @@ export class SubscriptionService implements SubscriptionServiceInterface {
       const subscription = await Subscription.findByPk(subscription_id, {
         include: [
           {
-            model: SubscriptionStatus
+            model: SubscriptionStatus,
+            as: 'SubscriptionStatus'
           },
           {
-            model: SubscriptionFeature
+            model: SubscriptionFeature,
+            as: 'SubscriptionFeatures'
           }
         ]
       });
