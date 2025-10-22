@@ -172,12 +172,12 @@ export function setupAssociations(): void {
   });
 
   BrowserContext.belongsTo(BrowserContextStatus, {
-    foreignKey: 'status_id',
+    foreignKey: 'browser_context_status_id',
     as: 'BrowserContextStatus',
   });
 
   BrowserContextStatus.hasMany(BrowserContext, {
-    foreignKey: 'status_id',
+    foreignKey: 'browser_context_status_id',
     as: 'BrowserContexts',
   });
 
