@@ -18,7 +18,7 @@ import {
 export interface UserServiceInterface {
   createUser(userData: CreateUserRequest): Promise<ApiResponse<User>>;
   getUserById(user_id: number): Promise<ApiResponse<User>>;
-  getAllUsers(pagination?: PaginationQuery, filters?: FilterQuery): Promise<PaginatedResponse<User>>;
+  getAllUsers(pagination?: PaginationQuery, filters?: FilterQuery): Promise<ApiResponse<{ users: any[]; pagination: { currentPage: number; totalPages: number; totalItems: number; itemsPerPage: number } }>>;
   updateUser(user_id: number, userData: UpdateUserRequest): Promise<ApiResponse<User>>;
   deleteUser(user_id: number): Promise<ApiResponse<void>>;
   getUserRoles(user_id: number): Promise<ApiResponse<Role[]>>;
@@ -152,7 +152,7 @@ export class UserService implements UserServiceInterface {
   /**
    * Get all users with pagination and filters
    */
-  public async getAllUsers(pagination: PaginationQuery = {}, filters: FilterQuery = {}): Promise<PaginatedResponse<User>> {
+  public async getAllUsers(pagination: PaginationQuery = {}, filters: FilterQuery = {}): Promise<ApiResponse<{ users: any[]; pagination: { currentPage: number; totalPages: number; totalItems: number; itemsPerPage: number } }>> {
     try {
       const page = pagination.page || 1;
       const limit = pagination.limit || 10;
@@ -195,15 +195,30 @@ export class UserService implements UserServiceInterface {
 
       const totalPages = Math.ceil(count / limit);
 
+      // Map DB rows to the public API shape
+      const users = rows.map((u: any) => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        phone: u.phone_number ? (typeof u.phone_number === 'number' ? `+${u.phone_number}` : u.phone_number) : null,
+        role: u.Roles && u.Roles[0] ? u.Roles[0].slug : 'user',
+        status: u.UserStatus ? u.UserStatus.slug : null,
+        emailVerified: typeof u.email_verified === 'boolean' ? u.email_verified : true,
+        createdAt: u.createdAt,
+        updatedAt: u.updatedAt
+      }));
+
       return {
         success: true,
         message: 'Users retrieved successfully',
-        data: rows,
-        pagination: {
-          page,
-          limit,
-          total: count,
-          totalPages
+        data: {
+          users,
+          pagination: {
+            currentPage: page,
+            totalPages,
+            totalItems: count,
+            itemsPerPage: limit
+          }
         }
       };
 
@@ -213,12 +228,14 @@ export class UserService implements UserServiceInterface {
         success: false,
         message: 'Failed to retrieve users',
         error: error instanceof Error ? error.message : 'Unknown error',
-        data: [],
-        pagination: {
-          page: 1,
-          limit: 10,
-          total: 0,
-          totalPages: 0
+        data: {
+          users: [],
+          pagination: {
+            currentPage: 1,
+            totalPages: 0,
+            totalItems: 0,
+            itemsPerPage: 10
+          }
         }
       };
     }
