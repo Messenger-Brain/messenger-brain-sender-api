@@ -92,8 +92,10 @@ export class AuthService implements AuthServiceInterface {
         name: userData.name,
         email: userData.email,
         password: hashedPassword,
+        phone_number: userData.phone_number,
         status_id: statusId,
-        free_trial: userData.freeTrial ?? false
+        free_trial: userData.freeTrial ?? false,
+        email_verified: userData.freeTrial ?? true
       });
 
       // Assign role (default to 'user' if not provided)
@@ -128,9 +130,11 @@ export class AuthService implements AuthServiceInterface {
             id: user.id,
             name: user.name,
             email: user.email,
+            phone_number: user.phone_number,
             role: 'user', // Default role
             status: 'active', // Default status
-            free_trial: user.free_trial
+            free_trial: user.free_trial,
+            email_verified: user.email_verified
           },
           token,
           refreshToken
@@ -212,9 +216,11 @@ export class AuthService implements AuthServiceInterface {
             id: user.id,
             name: user.name,
             email: user.email,
+            phone_number: user.phone_number,
             role: user.Roles?.[0]?.slug || 'user',
             status: user.UserStatus?.slug || 'active',
-            free_trial: user.free_trial
+            free_trial: user.free_trial,
+            email_verified: user.email_verified
           },
           token,
           refreshToken
@@ -396,9 +402,11 @@ export class AuthService implements AuthServiceInterface {
             id: user.id,
             name: user.name,
             email: user.email,
+            phone_number: user.phone_number,
             role: user.Roles?.[0]?.slug || 'user',
             status: user.UserStatus?.slug || 'active',
-            free_trial: user.free_trial
+            free_trial: user.free_trial,
+            email_verified: user.email_verified
           },
           token: newToken,
           refreshToken: newRefreshToken

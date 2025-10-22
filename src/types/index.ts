@@ -72,18 +72,22 @@ export interface CreateUserRequest {
   name: string;
   email: string;
   password: string;
+  phone_number: number;
   roleId: number;
   statusId: number;
   freeTrial?: boolean;
+  email_verified: boolean;
 }
 
 export interface UpdateUserRequest {
   name?: string;
   email?: string;
   password?: string;
+  phone_number: number;
   roleId?: number;
   statusId?: number;
   freeTrial?: boolean;
+  email_verified: boolean;
 }
 
 export interface LoginRequest {
@@ -99,9 +103,11 @@ export interface AuthResponse {
       id: number;
       name: string;
       email: string;
+      phone_number: number;
       role: string;
       status: string;
       free_trial: boolean;
+      email_verified: boolean;
     };
     token: string;
     refreshToken?: string;

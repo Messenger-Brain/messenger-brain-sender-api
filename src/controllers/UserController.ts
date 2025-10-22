@@ -36,16 +36,20 @@ export class UserController {
     name: Joi.string().min(2).max(200).required(),
     email: Joi.string().email().max(100).required(),
     password: Joi.string().min(8).max(200).required(),
+    phone_number: Joi.number().integer().min(1).optional(),
     role_id: Joi.number().integer().min(1).optional(),
     status_id: Joi.number().integer().min(1).optional(),
-    free_trial: Joi.boolean().optional()
+    free_trial: Joi.boolean().optional(),
+    email_verified: Joi.boolean().optional()
   });
 
   private readonly updateUserSchema = Joi.object({
     name: Joi.string().min(2).max(200).optional(),
     email: Joi.string().email().max(100).optional(),
+    phone_number: Joi.number().integer().min(1).optional(),
     status_id: Joi.number().integer().min(1).optional(),
-    free_trial: Joi.boolean().optional()
+    free_trial: Joi.boolean().optional(),
+    email_verified: Joi.boolean().optional()
   });
 
   private readonly getUserListSchema = Joi.object({

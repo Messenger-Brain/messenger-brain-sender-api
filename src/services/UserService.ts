@@ -74,8 +74,10 @@ export class UserService implements UserServiceInterface {
         name: userData.name,
         email: userData.email,
         password: userData.password,
+        phone_number: userData.phone_number,
         status_id: userData.statusId,
-        free_trial: userData.freeTrial ?? false
+        free_trial: userData.freeTrial ?? false,
+        email_verified: true
       });
 
       // Assign role if provided

@@ -7,8 +7,10 @@ interface UserAttributes {
   name: string;
   email: string;
   password: string;
+  phone_number: number;
   status_id: number;
   free_trial: boolean;
+  email_verified: boolean;
   created_at?: Date;
   updated_at?: Date;
 }
@@ -22,8 +24,10 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   public name!: string;
   public email!: string;
   public password!: string;
+  public phone_number!: number;
   public status_id!: number;
   public free_trial!: boolean;
+  public email_verified!: boolean;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 
@@ -91,6 +95,14 @@ User.init(
         notEmpty: true,
         len: [6, 200],
       },
+     },
+    phone_number: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      validate: {
+        notEmpty: true,
+        len: [6, 15],
+      },
     },
     status_id: {
       type: DataTypes.INTEGER,
@@ -101,6 +113,11 @@ User.init(
       },
     },
     free_trial: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+    },
+    email_verified: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: true,
