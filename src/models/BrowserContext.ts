@@ -4,7 +4,8 @@ import { sequelize } from '../config/sequelize';
 // BrowserContext attributes interface
 interface BrowserContextAttributes {
   id: number;
-  status_id: number;
+  browser_context_status_id: number;
+  browser_system_id?: string;
   created_at?: Date;
   updated_at?: Date;
 }
@@ -15,9 +16,10 @@ interface BrowserContextCreationAttributes extends Optional<BrowserContextAttrib
 // BrowserContext model class
 class BrowserContext extends Model<BrowserContextAttributes, BrowserContextCreationAttributes> implements BrowserContextAttributes {
   public id!: number;
-  public status_id!: number;
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+  public browser_context_status_id!: number;
+  public browser_system_id?: string;
+  public readonly created_at!: Date;
+  public readonly updated_at!: Date;
 
   // Associations
   public BrowserContextStatus?: any;
@@ -37,13 +39,18 @@ BrowserContext.init(
       autoIncrement: true,
       primaryKey: true,
     },
-    status_id: {
+    browser_context_status_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
         model: 'browser_context_status',
         key: 'id',
       },
+    },
+    browser_system_id: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      unique: true,
     },
     created_at: {
       type: DataTypes.DATE,
@@ -63,7 +70,11 @@ BrowserContext.init(
     underscored: true,
     indexes: [
       {
-        fields: ['status_id'],
+        fields: ['browser_context_status_id'],
+      },
+      {
+        fields: ['browser_system_id'],
+        unique: true,
       },
     ],
   }

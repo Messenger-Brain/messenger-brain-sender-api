@@ -8,6 +8,9 @@ import routes from './routes';
 import { setupAssociations } from './models';
 import { sequelize } from './config/sequelize';
 import Logger from './utils/logger';
+import { BrowserContextService } from './services/BrowserContextService';
+import { RedisService } from './services/RedisService';
+import { WhatsAppMessageSenderService } from './services/WhatsAppMessageSenderService';
 
 export class App {
   public app: Application;
@@ -121,6 +124,24 @@ export class App {
       // Database schema is managed by migrations, no sync needed
       Logger.info('Database schema managed by migrations');
 
+      // Initialize Redis service
+      const redisService = RedisService.getInstance();
+      const redisConnected = await redisService.ping();
+      if (redisConnected) {
+        Logger.info('Redis connection established successfully');
+      } else {
+        Logger.warn('Redis connection failed, message queuing may not work properly');
+      }
+
+      // Initialize Puppeteer browser
+      const browserContextService = BrowserContextService.getInstance();
+      await browserContextService.initializeBrowser();
+      Logger.info('Puppeteer browser initialized successfully');
+
+      // Initialize WhatsApp message sender service (this starts the workers)
+      WhatsAppMessageSenderService.getInstance();
+      Logger.info('WhatsApp message sender service initialized successfully');
+
     } catch (error) {
       Logger.error('Failed to initialize application', error);
       throw error;
@@ -143,10 +164,26 @@ export class App {
 
   public async close(): Promise<void> {
     try {
+      // Close message queue service
+      const messageQueueService = await import('./services/MessageQueueService').then(m => m.MessageQueueService.getInstance());
+      await messageQueueService.close();
+      Logger.info('Message queue service closed');
+
+      // Close browser context service
+      const browserContextService = BrowserContextService.getInstance();
+      await browserContextService.shutdown();
+      Logger.info('Browser context service closed');
+
+      // Close Redis connection
+      const redisService = RedisService.getInstance();
+      await redisService.disconnect();
+      Logger.info('Redis connection closed');
+
+      // Close database connection
       await sequelize.close();
       Logger.info('Database connection closed');
     } catch (error) {
-      Logger.error('Error closing database connection', error);
+      Logger.error('Error closing services', error);
     }
   }
 }

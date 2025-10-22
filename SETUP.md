@@ -6,7 +6,8 @@ Guía paso a paso para configurar el proyecto desde cero.
 
 - [ ] Node.js 18+ instalado
 - [ ] MySQL 8.0+ instalado y corriendo
-- [ ] Redis 6.0+ instalado y corriendo
+- [ ] Redis 6.0+ instalado como servicio y corriendo
+- [ ] Verificar Redis: `redis-cli ping` debe responder `PONG`
 
 ## 📝 Pasos de Instalación
 
@@ -128,14 +129,18 @@ mysql -u root -p -e "CREATE DATABASE messenger_brain_sender;"
 npm run db:reset
 ```
 
-### ❌ Error: Redis no está corriendo
+### ❌ Error: Redis no está instalado o corriendo
 
+**Instalar Redis:**
 ```bash
 # macOS
+brew install redis
 brew services start redis
 
-# Linux
-sudo systemctl start redis
+# Ubuntu/Debian
+sudo apt install redis-server
+sudo systemctl start redis-server
+sudo systemctl enable redis-server
 
 # Verificar
 redis-cli ping

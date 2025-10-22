@@ -10,6 +10,7 @@ export interface AppConfiguration {
   cors: CORSConfiguration;
   rateLimit: RateLimitConfiguration;
   logging: LoggingConfiguration;
+  puppeteer: PuppeteerConfiguration;
 }
 
 export interface ServerConfiguration {
@@ -62,6 +63,13 @@ export interface LoggingConfiguration {
   logDirectory: string;
 }
 
+export interface PuppeteerConfiguration {
+  headless: boolean;
+  whatsappUrl: string;
+  defaultTimeout: number;
+  navigationTimeout: number;
+}
+
 export class ConfigService {
   private static instance: ConfigService;
   private config: AppConfiguration;
@@ -86,6 +94,7 @@ export class ConfigService {
       cors: this.loadCORSConfiguration(),
       rateLimit: this.loadRateLimitConfiguration(),
       logging: this.loadLoggingConfiguration(),
+      puppeteer: this.loadPuppeteerConfiguration(),
     };
   }
 
@@ -154,6 +163,15 @@ export class ConfigService {
     };
   }
 
+  private loadPuppeteerConfiguration(): PuppeteerConfiguration {
+    return {
+      headless: process.env.PUPPETEER_HEADLESS === 'true',
+      whatsappUrl: process.env.PUPPETEER_WHATSAPP_URL || 'https://web.whatsapp.com',
+      defaultTimeout: parseInt(process.env.PUPPETEER_DEFAULT_TIMEOUT || '30000'),
+      navigationTimeout: parseInt(process.env.PUPPETEER_NAVIGATION_TIMEOUT || '60000'),
+    };
+  }
+
   public getConfig(): AppConfiguration {
     return this.config;
   }
@@ -184,6 +202,10 @@ export class ConfigService {
 
   public getLoggingConfig(): LoggingConfiguration {
     return this.config.logging;
+  }
+
+  public getPuppeteerConfig(): PuppeteerConfiguration {
+    return this.config.puppeteer;
   }
 
   public isDevelopment(): boolean {

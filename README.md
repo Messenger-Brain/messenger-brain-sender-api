@@ -6,7 +6,24 @@ API de alto rendimiento para envío de mensajes WhatsApp con Sequelize ORM y arq
 
 - Node.js 18+
 - MySQL 8.0+
-- Redis 6.0+
+- Redis 6.0+ (debe estar instalado como servicio en el sistema)
+
+### Instalación rápida de Redis:
+
+**macOS:**
+```bash
+brew install redis && brew services start redis
+```
+
+**Ubuntu/Debian:**
+```bash
+sudo apt install redis-server && sudo systemctl start redis-server
+```
+
+**Verificar:**
+```bash
+redis-cli ping  # Debe responder: PONG
+```
 
 ## 🚀 Setup Inicial para Desarrolladores
 
