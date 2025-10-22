@@ -6,7 +6,8 @@ import {
   createSubscriptionSchema, 
   updateSubscriptionSchema,
   paginationSchema,
-  idParamSchema
+  idParamSchema,
+  createSubscriptionPlanSchema
 } from '../schemas/validationSchemas';
 
 const router = Router();
@@ -405,6 +406,75 @@ router.get('/stats',
   authMiddleware.authenticate,
   authMiddleware.requireAdmin,
   subscriptionController.getUserSubscriptionStats
+);
+
+/**
+ * @swagger
+ * /api/subscriptions/plan:
+ *   post:
+ *     summary: Create a new subscription plan (Admin only)
+ *     tags: [Subscriptions]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - slug
+ *               - description
+ *               - statusId
+ *               - price
+ *             properties:
+ *               slug:
+ *                 type: string
+ *                 minLength: 2
+ *                 maxLength: 100
+ *                 pattern: ^[a-z0-9_-]+$
+ *                 description: Unique identifier for the subscription plan (only alphanumeric, underscore and dash)
+ *               description:
+ *                 type: string
+ *                 minLength: 5
+ *                 maxLength: 500
+ *                 description: Description of the subscription plan
+ *               statusId:
+ *                 type: number
+ *                 description: Status ID of the subscription plan (1 for active)
+ *               price:
+ *                 type: number
+ *                 format: float
+ *                 minimum: 0
+ *                 description: Price of the subscription plan
+ *     responses:
+ *       201:
+ *         description: Subscription plan created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   $ref: '#/components/schemas/Subscription'
+ *       400:
+ *         description: Validation error or subscription plan already exists
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden (Admin only)
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/plan',
+  authMiddleware.authenticate,
+  authMiddleware.requireAdmin,
+  validationMiddleware.validateBody(createSubscriptionPlanSchema),
+  subscriptionController.createSubscriptionPlan
 );
 
 export default router;

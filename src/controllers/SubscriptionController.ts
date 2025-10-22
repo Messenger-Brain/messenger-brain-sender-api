@@ -20,6 +20,35 @@ export class SubscriptionController {
     this.rateLimitMiddleware = RateLimitMiddleware.getInstance();
     this.logger = Logger;
   }
+  
+  /**
+   * Create a new subscription plan (Admin only)
+   */
+  public createSubscriptionPlan = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const subscriptionData = {
+        slug: req.body.slug,
+        description: req.body.description,
+        statusId: req.body.statusId,
+        price: req.body.price
+      };
+      
+      const result = await this.subscriptionService.createSubscription(subscriptionData);
+      
+      if (result.success) {
+        res.status(201).json(result);
+      } else {
+        res.status(400).json(result);
+      }
+    } catch (error) {
+      this.logger.error('Error creating subscription plan', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  };
 
   /**
    * Get all available subscriptions
