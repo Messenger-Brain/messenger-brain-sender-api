@@ -157,8 +157,23 @@ export class UserService implements UserServiceInterface {
       const page = pagination.page || 1;
       const limit = pagination.limit || 10;
       const offset = (page - 1) * limit;
-      const sortBy = pagination.sortBy || 'created_at';
-      const sortOrder = pagination.sortOrder || 'DESC';
+      // Normalize sortBy values from the API to actual DB columns.
+      // Acceptable inputs: 'createdAt', 'created_at', 'name', 'email' (case-insensitive)
+      const rawSort = (pagination.sortBy || 'createdAt').toString();
+      const sortOrder = (pagination.sortOrder || 'DESC') as 'ASC' | 'DESC';
+
+      let sortBy: string;
+      const rawLower = rawSort.toLowerCase();
+      if (rawLower === 'createdat' || rawLower === 'created_at') {
+        sortBy = 'created_at';
+      } else if (rawLower === 'name') {
+        sortBy = 'name';
+      } else if (rawLower === 'email') {
+        sortBy = 'email';
+      } else {
+        // Fallback to created_at if unknown
+        sortBy = 'created_at';
+      }
 
       // Build where clause
       const whereClause: any = {};

@@ -131,6 +131,8 @@ const authMiddleware = AuthMiddleware.getInstance();
  *         name: sortBy
  *         schema:
  *           type: string
+ *           enum: [createdAt, name, email]
+ *           description: Field to sort by Selection
  *       - in: query
  *         name: sortOrder
  *         schema:

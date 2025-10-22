@@ -158,11 +158,12 @@ export const userFilterSchema = Joi.object({
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(100).default(10),
   search: Joi.string().max(200).optional(),
+  roleId: Joi.number().integer().positive().optional(),
   role: Joi.string().valid('admin', 'user', 'moderator').optional(),
   status: Joi.string().valid('active', 'inactive', 'suspended').optional(),
   statusId: Joi.number().integer().positive().optional(),
   freeTrial: Joi.boolean().optional(),
-  sortBy: Joi.string().max(50).optional(),
+  sortBy: Joi.string().valid('createdAt', 'name', 'email').max(50).optional(),
   sortOrder: Joi.string().valid('ASC', 'DESC').default('DESC')
 });
 
