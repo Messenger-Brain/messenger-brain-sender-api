@@ -158,7 +158,7 @@ export const userFilterSchema = Joi.object({
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(100).default(10),
   search: Joi.string().max(200).optional(),
-  roleId: Joi.number().integer().positive().optional(),
+  role: Joi.string().valid('admin', 'user', 'moderator').optional(),
   statusId: Joi.number().integer().positive().optional(),
   freeTrial: Joi.boolean().optional(),
   sortBy: Joi.string().max(50).optional(),

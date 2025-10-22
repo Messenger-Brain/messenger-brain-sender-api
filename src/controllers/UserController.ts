@@ -124,16 +124,19 @@ export class UserController {
         sortOrder: ((req.query.sortOrder as string) || 'DESC') as 'ASC' | 'DESC'
       };
 
+      // Accept both slug-based and id-based filters. Prefer slugs when provided.
       const filters = {
         search: req.query.search as string,
+        role: req.query.role as string || undefined,
         role_id: req.query.role_id ? parseInt(req.query.role_id as string) : undefined,
+        status: req.query.status as string || undefined,
         status_id: req.query.status_id ? parseInt(req.query.status_id as string) : undefined,
         free_trial: req.query.free_trial ? req.query.free_trial === 'true' : undefined
       };
 
       this.logger.info('User list request', { pagination, filters });
 
-      const result = await this.userService.getAllUsers(pagination, filters);
+  const result = await this.userService.getAllUsers(pagination, filters as any);
 
       if (result.success) {
         res.status(200).json(result);

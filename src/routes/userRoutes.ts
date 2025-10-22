@@ -108,9 +108,11 @@ const authMiddleware = AuthMiddleware.getInstance();
  *         schema:
  *           type: string
  *       - in: query
- *         name: roleId
+ *         name: role
  *         schema:
- *           type: number
+ *           type: string
+ *           enum: [admin, user, moderator]
+ *           description: Filter users by role type
  *       - in: query
  *         name: statusId
  *         schema:

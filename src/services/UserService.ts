@@ -175,15 +175,24 @@ export class UserService implements UserServiceInterface {
         whereClause.status_id = await this.getStatusIdBySlug(filters.status);
       }
 
+      // Build role filter if provided. When a role filter is present we make the include required
+      // so Sequelize performs an inner join and only returns users that have that role.
+      const roleInclude: any = {
+        model: Role,
+        as: 'Roles',
+        through: { attributes: [] },
+        required: !!filters.role
+      };
+
+      if (filters.role) {
+        roleInclude.where = { slug: filters.role };
+      }
+
       // Get users with pagination
       const { count, rows } = await User.findAndCountAll({
         where: whereClause,
         include: [
-          {
-            model: Role,
-            as: 'Roles',
-            through: { attributes: [] }
-          },
+          roleInclude,
           {
             model: UserStatus,
             as: 'UserStatus'
@@ -197,8 +206,11 @@ export class UserService implements UserServiceInterface {
       const totalPages = Math.ceil(count / limit);
 
       // If a search was provided and there are no matches, throw so the catch block returns the empty response
-      if (filters.search && count === 0) {
-        throw new Error('No users found matching search criteria');
+      if ((filters.search || filters.role) && count === 0) {
+        const errorMessage = filters.role
+          ? `No users found with role '${filters.role}'`
+          : 'No users found matching search criteria';
+        throw new Error(errorMessage);
       }
 
       // Map DB rows to the public API shape
