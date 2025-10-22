@@ -244,7 +244,10 @@ export class WhatsAppMessageSenderService {
       // 2. Usar browserContext.page para interactuar con la página de WhatsApp
       // 3. Enviar el mensaje usando selectores de WhatsApp Web
       // 4. Retornar el resultado del envío
+      // 5. LLamar al puppeterWhatsappService para enviar el mensaje y enviar el browserContext.system_instance
       // ========================================
+
+
 
       this.logger.warn('Puppeteer logic not implemented yet - job marked as placeholder');
 
