@@ -269,4 +269,32 @@ export class SubscriptionController {
       });
     }
   };
+
+  /**
+   * Delete subscription plan (Admin only)
+   */
+  public deleteSubscriptionPlan = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const subscriptionId = parseInt((req.params.id as string) || '0');
+      if (!subscriptionId || Number.isNaN(subscriptionId) || subscriptionId <= 0) {
+        res.status(400).json({ success: false, message: 'Invalid subscription id' });
+        return;
+      }
+
+      const result = await this.subscriptionService.deleteSubscription(subscriptionId);
+
+      if (result.success) {
+        res.status(200).json(result);
+      } else {
+        res.status(result.message === 'Subscription not found' ? 404 : 400).json(result);
+      }
+    } catch (error) {
+      this.logger.error('Error deleting subscription plan', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  };
 }

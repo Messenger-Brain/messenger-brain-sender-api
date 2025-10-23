@@ -551,4 +551,48 @@ router.put('/plan/:id',
   subscriptionController.updateSubscriptionPlan
 );
 
+// Delete subscription plan (Admin only)
+/**
+ * @swagger
+ * /api/subscriptions/plan/{id}:
+ *   delete:
+ *     summary: Delete a subscription plan (Admin only)
+ *     tags: [Subscriptions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: number
+ *         description: ID of the subscription plan to delete
+ *     responses:
+ *       200:
+ *         description: Subscription plan deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden (Admin only)
+ *       404:
+ *         description: Subscription plan not found
+ *       500:
+ *         description: Internal server error
+ */
+router.delete('/plan/:id',
+  authMiddleware.authenticate,
+  authMiddleware.requireAdmin,
+  validationMiddleware.validateParams(idParamSchema),
+  subscriptionController.deleteSubscriptionPlan
+);
+
 export default router;
