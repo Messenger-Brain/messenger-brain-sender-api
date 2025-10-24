@@ -69,15 +69,29 @@ export class UserService implements UserServiceInterface {
         };
       }
 
+      const passwordValidation = this.validatePassword(userData.password);
+      if (!passwordValidation.isValid) {
+        this.logger.warn('Password validation failed', { errors: passwordValidation.errors });
+        return {
+          success: false,
+          message: 'Invalid password format',
+          error: passwordValidation.errors.join(', ')
+        };
+      }
+
+      
+      const hashedPassword = await User.hashPassword(userData.password);
+
+
       // Create user
       const user = await User.create({
         name: userData.name,
         email: userData.email,
-        password: userData.password,
+        password: hashedPassword,
         phone_number: String(userData.phone_number),
         status_id: userData.statusId,
         free_trial: userData.freeTrial ?? false,
-        email_verified: true
+        email_verified: false
       });
 
       // Assign role if provided
@@ -856,6 +870,38 @@ export class UserService implements UserServiceInterface {
         error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
+  }
+
+    /**
+   * Validate password strength
+   */
+  public validatePassword(password: string): { isValid: boolean; errors: string[] } {
+    const errors: string[] = [];
+
+    if (password.length < 8) {
+      errors.push('Password must be at least 8 characters long');
+    }
+
+    if (!/[A-Z]/.test(password)) {
+      errors.push('Password must contain at least one uppercase letter');
+    }
+
+    if (!/[a-z]/.test(password)) {
+      errors.push('Password must contain at least one lowercase letter');
+    }
+
+    if (!/\d/.test(password)) {
+      errors.push('Password must contain at least one number');
+    }
+
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      errors.push('Password must contain at least one special character');
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
   }
 
 }

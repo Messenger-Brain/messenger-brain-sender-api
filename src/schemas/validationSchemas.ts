@@ -38,7 +38,12 @@ export const refreshTokenSchema = Joi.object({
 export const createUserSchema = Joi.object({
   name: Joi.string().min(2).max(200).required(),
   email: Joi.string().email().required(),
-  password: Joi.string().min(6).required(),
+  password: Joi.string().min(8).required(),
+  phone_number: Joi.string().pattern(/^\+/).min(8).max(15).required().messages({
+    'string.pattern.base': 'Phone number must start with a +',
+    'string.min': 'Phone number must be at least {8} characters',
+    'string.max': 'Phone number must be at most {15} characters'
+  }),
   roleId: Joi.number().integer().positive().required(),
   statusId: Joi.number().integer().positive().required()
 });
@@ -46,6 +51,7 @@ export const createUserSchema = Joi.object({
 export const updateUserSchema = Joi.object({
   name: Joi.string().min(2).max(200).optional(),
   email: Joi.string().email().optional(),
+  phone_number: Joi.string().min(8).max(15).optional(),
   statusId: Joi.number().integer().positive().optional(),
   freeTrial: Joi.boolean().optional()
 });

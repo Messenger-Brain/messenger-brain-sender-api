@@ -93,7 +93,7 @@ User.init(
       allowNull: false,
       validate: {
         notEmpty: true,
-        len: [6, 200],
+        len: [8, 200],
       },
      },
     phone_number: {

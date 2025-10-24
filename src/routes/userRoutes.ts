@@ -48,6 +48,7 @@ const authMiddleware = AuthMiddleware.getInstance();
  *         - name
  *         - email
  *         - password
+ *         - phone_number
  *         - roleId
  *         - statusId
  *       properties:
@@ -60,7 +61,10 @@ const authMiddleware = AuthMiddleware.getInstance();
  *           format: email
  *         password:
  *           type: string
- *           minLength: 6
+ *           minLength: 8
+ *         phone_number:
+ *           type: string
+ *           minLength: 8
  *         roleId:
  *           type: number
  *         statusId:
