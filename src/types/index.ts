@@ -73,6 +73,7 @@ export interface CreateUserRequest {
   email: string;
   password: string;
   phone_number: string;
+  role:string;
   roleId: number;
   statusId: number;
   freeTrial?: boolean;

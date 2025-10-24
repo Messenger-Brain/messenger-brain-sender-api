@@ -98,11 +98,20 @@ User.init(
      },
     phone_number: {
       type: DataTypes.STRING(15),
-      allowNull: false,
+      allowNull: true,
       validate: {
-        notEmpty: true,
-        len: [6, 15],
-      },
+        phoneNumberFormat(value: string) {
+          if (value === null || value === '') {
+            return; // Allow null or empty string
+          }
+          if (!value.match(/^\+\d+$/)) {
+            throw new Error('Phone number must start with + and contain only digits');
+          }
+          if (value.length < 8 || value.length > 15) {
+            throw new Error('Phone number must be between 8 and 15 characters');
+          }
+        }
+      }
     },
     status_id: {
       type: DataTypes.INTEGER,

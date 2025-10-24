@@ -10,6 +10,7 @@ export const registerSchema = Joi.object({
   name: Joi.string().min(2).max(200).required(),
   email: Joi.string().email().required(),
   password: Joi.string().min(6).required(),
+  role: Joi.string().valid('admin', 'user', 'moderator').optional(),
   roleId: Joi.number().integer().min(1).optional(),
   statusId: Joi.number().integer().min(1).optional(),
   freeTrial: Joi.boolean().optional()
@@ -39,19 +40,24 @@ export const createUserSchema = Joi.object({
   name: Joi.string().min(2).max(200).required(),
   email: Joi.string().email().required(),
   password: Joi.string().min(8).required(),
-  phone_number: Joi.string().pattern(/^\+/).min(8).max(15).required().messages({
-    'string.pattern.base': 'Phone number must start with a +',
-    'string.min': 'Phone number must be at least {8} characters',
-    'string.max': 'Phone number must be at most {15} characters'
+  phone_number: Joi.string().allow('', null).pattern(/^\+\d+$/).min(8).max(15).optional().messages({
+    'string.pattern.base': 'Phone number must start with + and contain only digits',
+    'string.min': 'Phone number must be at least {#limit} characters',
+    'string.max': 'Phone number must be at most {#limit} characters'
   }),
-  roleId: Joi.number().integer().positive().required(),
-  statusId: Joi.number().integer().positive().required()
+  role: Joi.string().allow('').valid('admin', 'user', 'moderator').optional(),
+  roleId: Joi.number().integer().allow(null).positive().optional(),
+  statusId: Joi.number().integer().allow(null).positive().optional()
 });
 
 export const updateUserSchema = Joi.object({
   name: Joi.string().min(2).max(200).optional(),
   email: Joi.string().email().optional(),
-  phone_number: Joi.string().min(8).max(15).optional(),
+  phone_number: Joi.string().allow('', null).pattern(/^\+\d+$/).min(8).max(15).optional().messages({
+    'string.pattern.base': 'Phone number must start with + and contain only digits',
+    'string.min': 'Phone number must be at least {#limit} characters',
+    'string.max': 'Phone number must be at most {#limit} characters'
+  }),
   statusId: Joi.number().integer().positive().optional(),
   freeTrial: Joi.boolean().optional()
 });

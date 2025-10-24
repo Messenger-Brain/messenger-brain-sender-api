@@ -62,6 +62,8 @@ export class UserService implements UserServiceInterface {
         where: { email: userData.email }
       });
 
+      
+
       if (existingUser) {
         return {
           success: false,
@@ -82,23 +84,34 @@ export class UserService implements UserServiceInterface {
       
       const hashedPassword = await User.hashPassword(userData.password);
 
+      var existingRole = await this.getRoleIdBySlug(userData.role);
+      var roleIdFound = existingRole;
+      
+      if (existingRole == null) {
+        roleIdFound = await this.getRoleIdBySlug("user");
+      }
+
+      this.logger.info('Role ID determined', { roleId: roleIdFound });
+
 
       // Create user
       const user = await User.create({
         name: userData.name,
         email: userData.email,
         password: hashedPassword,
-        phone_number: String(userData.phone_number),
-        status_id: userData.statusId,
+        phone_number: userData.phone_number ??'+0000000000',
+        status_id: 1, // Default to 'active' status
         free_trial: userData.freeTrial ?? false,
         email_verified: false
       });
 
+      this.logger.info('User created successfully', { user: user});
+
       // Assign role if provided
-      if (userData.roleId) {
+      if (roleIdFound) {
         await UserRole.create({
           user_id: user.id,
-          role_id: userData.roleId
+          role_id: roleIdFound
         });
       }
 
@@ -903,6 +916,17 @@ export class UserService implements UserServiceInterface {
       errors
     };
   }
+
+
+  private async getRoleIdBySlug(slug: string): Promise<number | null> {
+  try {
+    const role = await Role.findOne({ where: { slug } });
+    return role ? role.id : null;
+  } catch (error) {
+    this.logger.error('Failed to get role ID by slug', error);
+    return null;
+  }
+}
 
 }
 
