@@ -216,7 +216,7 @@ export class AuthService implements AuthServiceInterface {
             id: user.id,
             name: user.name,
             email: user.email,
-            phone_number: user.phone_number,
+            phone_number: String(user.phone_number),
             role: user.Roles?.[0]?.slug || 'user',
             status: user.UserStatus?.slug || 'active',
             free_trial: user.free_trial,
