@@ -42,8 +42,8 @@ export const createUserSchema = Joi.object({
   password: Joi.string().min(8).required(),
   phone_number: Joi.string().allow('', null).pattern(/^\+\d+$/).min(8).max(15).optional().messages({
     'string.pattern.base': 'Phone number must start with + and contain only digits',
-    'string.min': 'Phone number must be at least {#limit} characters',
-    'string.max': 'Phone number must be at most {#limit} characters'
+    'string.min': 'Phone number must be at least {8} characters',
+    'string.max': 'Phone number must be at most {#15} characters'
   }),
   role: Joi.string().allow('').valid('admin', 'user', 'moderator').optional(),
   roleId: Joi.number().integer().allow(null).positive().optional(),

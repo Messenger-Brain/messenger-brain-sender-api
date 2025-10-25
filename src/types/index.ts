@@ -27,6 +27,17 @@ export type AuthenticatedRequest = Request & {
 };
 
 // Common API Response types
+export interface FormattedUserResponse {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  role: string;
+  status: string;
+  emailVerified: boolean;
+  createdAt: Date;
+}
+
 export interface ApiResponse<T = any> {
   success: boolean;
   message: string;

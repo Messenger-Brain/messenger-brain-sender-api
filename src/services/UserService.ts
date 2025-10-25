@@ -12,11 +12,12 @@ import {
   PaginationQuery,
   FilterQuery,
   ApiResponse,
-  PaginatedResponse 
+  PaginatedResponse,
+  FormattedUserResponse
 } from '../types';
 
 export interface UserServiceInterface {
-  createUser(userData: CreateUserRequest): Promise<ApiResponse<User>>;
+  createUser(userData: CreateUserRequest): Promise<ApiResponse<FormattedUserResponse>>;
   getUserById(user_id: number): Promise<ApiResponse<User>>;
   getAllUsers(pagination?: PaginationQuery, filters?: FilterQuery): Promise<ApiResponse<{ users: any[]; pagination: { currentPage: number; totalPages: number; totalItems: number; itemsPerPage: number } }>>;
   updateUser(user_id: number, userData: UpdateUserRequest): Promise<ApiResponse<User>>;
@@ -53,7 +54,7 @@ export class UserService implements UserServiceInterface {
   /**
    * Create a new user
    */
-  public async createUser(userData: CreateUserRequest): Promise<ApiResponse<User>> {
+  public async createUser(userData: CreateUserRequest): Promise<ApiResponse<FormattedUserResponse>> {
     try {
       this.logger.info('Creating new user', { email: userData.email });
 
@@ -122,10 +123,36 @@ export class UserService implements UserServiceInterface {
 
       this.logger.info('User created successfully', { user_id: user.id });
 
+      // Determine role slug for response (fallback to 'user')
+      let roleSlug = 'user';
+      try {
+        if (roleIdFound) {
+          const roleObj = await Role.findByPk(roleIdFound);
+          if (roleObj && roleObj.slug) roleSlug = roleObj.slug;
+        }
+      } catch (err) {
+        this.logger.warn('Failed to determine role slug for response', err);
+      }
+
+      // Determine status slug for response (use defaultStatus if available)
+      const statusSlug = defaultStatus && defaultStatus.slug ? defaultStatus.slug : 'active';
+
+      // Build formatted response object
+      const responseData: FormattedUserResponse = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone_number && user.phone_number !== '' ? user.phone_number : null,
+        role: roleSlug,
+        status: statusSlug,
+        emailVerified: typeof user.email_verified === 'boolean' ? user.email_verified : false,
+        createdAt: user.createdAt
+      };
+
       return {
         success: true,
         message: 'User created successfully',
-        data: user
+        data: responseData
       };
 
     } catch (error) {
