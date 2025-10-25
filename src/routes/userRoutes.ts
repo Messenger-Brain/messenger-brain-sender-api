@@ -50,7 +50,6 @@ const authMiddleware = AuthMiddleware.getInstance();
  *         - password
  *         - phone_number
  *         - roleId
- *         - statusId
  *       properties:
  *         name:
  *           type: string
@@ -67,8 +66,6 @@ const authMiddleware = AuthMiddleware.getInstance();
  *           minLength: 8
  *         role:
  *           type: string
- *         statusId:
- *           type: number
  *     UpdateUserRequest:
  *       type: object
  *       properties:

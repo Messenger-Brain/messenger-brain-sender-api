@@ -91,17 +91,19 @@ export class UserService implements UserServiceInterface {
         roleIdFound = await this.getRoleIdBySlug("user");
       }
 
-      this.logger.info('Role ID determined', { roleId: roleIdFound });
+      
 
+      const defaultStatus = await UserStatus.findOne({ where: { slug: 'active' } });
+      const defaultStatusId = defaultStatus ? defaultStatus.id : 1;
 
       // Create user
       const user = await User.create({
         name: userData.name,
         email: userData.email,
         password: hashedPassword,
-        phone_number: userData.phone_number ??'+0000000000',
-        status_id: 1, // Default to 'active' status
-        free_trial: userData.freeTrial ?? false,
+        phone_number: userData.phone_number ??"+0000000000",
+        status_id: defaultStatusId, // Default to 'active' status (fallback to 1 if not found)
+        free_trial: userData.freeTrial ?? true,
         email_verified: false
       });
 
@@ -918,15 +920,24 @@ export class UserService implements UserServiceInterface {
   }
 
 
+  /**
+   * Validate Role ID
+   */
   private async getRoleIdBySlug(slug: string): Promise<number | null> {
-  try {
-    const role = await Role.findOne({ where: { slug } });
-    return role ? role.id : null;
-  } catch (error) {
-    this.logger.error('Failed to get role ID by slug', error);
-    return null;
-  }
-}
+    try {
+        const role = await Role.findOne({ where: { slug } });
+        return role ? role.id : null;
+      } catch (error) {
+        this.logger.error('Failed to get role ID by slug', error);
+        return null;
+      }
+    }
+
+
+  
+
+  
+
 
 }
 
