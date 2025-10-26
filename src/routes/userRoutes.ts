@@ -4,7 +4,8 @@ import { AuthMiddleware } from '../middleware/auth';
 import { ValidationMiddleware } from '../middleware/validation';
 import { 
   createUserSchema, 
-  updateUserSchema, 
+  updateUserSchema,
+  updateProfileSchema,
   assignRoleSchema,
   userFilterSchema,
   idParamSchema,
@@ -259,6 +260,57 @@ router.get('/stats',
   authMiddleware.authenticate,
   authMiddleware.requireAdmin,
   userController.getUserStats
+);
+
+/**
+ * @swagger
+ * /api/users/profile:
+ *   put:
+ *     summary: Update authenticated user's profile
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 minLength: 2
+ *                 maxLength: 200
+ *               phone_number:
+ *                 type: string
+ *                 pattern: '^\+\d+$'
+ *                 minLength: 8
+ *                 maxLength: 15
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.put('/profile',
+  authMiddleware.authenticate,
+  validationMiddleware.validateBody(updateProfileSchema),
+  userController.updateProfile
 );
 
 /**

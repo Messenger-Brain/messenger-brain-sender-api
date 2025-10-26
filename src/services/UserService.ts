@@ -399,6 +399,50 @@ export class UserService implements UserServiceInterface {
   }
 
   /**
+   * Update authenticated user's own profile
+   */
+  public async updateProfile(user_id: number, profileData: Partial<{ name: string; phone_number: string }>): Promise<ApiResponse<User>> {
+    try {
+      this.logger.info('Updating user profile', { user_id });
+
+      const user = await User.findByPk(user_id);
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found'
+        };
+      }
+
+      const allowedFields: Array<keyof typeof profileData> = ['name', 'phone_number'];
+      const dataToUpdate: any = {};
+      for (const key of allowedFields) {
+        if (profileData[key] !== undefined) {
+          dataToUpdate[key] = profileData[key as keyof typeof profileData];
+        }
+      }
+
+      await user.update(dataToUpdate);
+      await this.logUserActivity(user_id, 'profile_updated', `User ${user.name} updated own profile`);
+
+      const updatedUser = await this.getUserById(user_id);
+
+      return {
+        success: true,
+        message: 'Profile updated successfully',
+        data: updatedUser.data!
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to update profile', error);
+      return {
+        success: false,
+        message: 'Failed to update profile',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
    * Delete user
    */
   public async deleteUser(user_id: number): Promise<ApiResponse<void>> {

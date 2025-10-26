@@ -62,6 +62,16 @@ export const updateUserSchema = Joi.object({
   freeTrial: Joi.boolean().optional()
 });
 
+// Profile update schema (for authenticated user updating own profile)
+export const updateProfileSchema = Joi.object({
+  name: Joi.string().min(2).max(200).optional(),
+  phone_number: Joi.string().allow('', null).pattern(/^\+\d+$/).min(8).max(15).optional().messages({
+    'string.pattern.base': 'Phone number must start with + and contain only digits',
+    'string.min': 'Phone number must be at least {#limit} characters',
+    'string.max': 'Phone number must be at most {#limit} characters'
+  })
+});
+
 export const assignRoleSchema = Joi.object({
   roleId: Joi.number().integer().positive().required()
 });

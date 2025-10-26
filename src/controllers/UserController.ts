@@ -217,6 +217,48 @@ export class UserController {
   };
 
   /**
+   * Update authenticated user's profile
+   * @route PUT /api/users/profile
+   */
+  public updateProfile = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const authUser = (req as any).user;
+      const userId = authUser?.id;
+
+      if (!userId) {
+        res.status(401).json({ success: false, message: 'Unauthorized' });
+        return;
+      }
+
+      this.logger.info('Profile update attempt', { userId });
+
+      // Ensure email/password are not accepted even if provided
+      const { email, password, ...body } = req.body as any;
+
+      const result = await this.userService.updateProfile(userId, body);
+
+      if (result.success) {
+        this.loggingMiddleware.logBusinessEvent('profile_updated', {
+          userId,
+          updatedBy: userId,
+          changes: body
+        });
+        res.status(200).json(result);
+      } else {
+        this.logger.warn('Profile update failed', { userId, error: result.error });
+        res.status(400).json(result);
+      }
+    } catch (error) {
+      this.logger.error('Profile update error', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: 'Profile update failed'
+      });
+    }
+  };
+
+  /**
    * Delete user
    * @route DELETE /api/users/:id
    */
