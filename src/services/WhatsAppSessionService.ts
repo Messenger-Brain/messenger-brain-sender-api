@@ -22,6 +22,7 @@ export interface WhatsAppSessionServiceInterface {
   updateSession(sessionId: number, user_id: number, sessionData: UpdateWhatsAppSessionRequest): Promise<ApiResponse<WhatsAppSession>>;
   deleteSession(sessionId: number, user_id: number): Promise<ApiResponse<void>>;
   getSessionStatus(sessionId: number, user_id: number): Promise<ApiResponse<any>>;
+  getActiveSessionStatus(userId: number): Promise<ApiResponse<{ status: string }>>;
   connectSession(sessionId: number, user_id: number): Promise<ApiResponse<void>>;
   disconnectSession(sessionId: number, user_id: number): Promise<ApiResponse<void>>;
   getSessionMessages(sessionId: number, user_id: number, pagination?: PaginationQuery): Promise<PaginatedResponse<Message>>;
@@ -431,6 +432,100 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
         success: false,
         message: 'Failed to connect session',
         error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Get active session status for authenticated user (without requiring session ID)
+   * This implements the GET /api/status endpoint from the documentation
+   * Returns only the status of the user's most recent active session
+   */
+  public async getActiveSessionStatus(userId: number): Promise<ApiResponse<{ status: string }>> {
+    try {
+      this.logger.info('Getting active session status for user', { userId });
+
+      // 1. Search for active sessions (connecting, connected, need_scan)
+      const activeSession = await WhatsAppSession.findOne({
+        where: {
+          user_id: userId,
+          status_id: {
+            [Op.in]: [1, 2, 4] // connecting (1), connected (2), need_scan (4)
+          }
+        },
+        include: [
+          {
+            model: WhatsAppSessionStatus,
+            as: 'WhatsAppSessionStatus'
+          }
+        ],
+        order: [['updated_at', 'DESC']]
+      });
+
+      // 2. If active session found, return its status
+      if (activeSession?.WhatsAppSessionStatus) {
+        this.logger.info('Active session found', { 
+          sessionId: activeSession.id, 
+          status: activeSession.WhatsAppSessionStatus.slug 
+        });
+        
+        return {
+          success: true,
+          message: 'Active session status retrieved successfully',
+          data: {
+            status: activeSession.WhatsAppSessionStatus.slug
+          }
+        };
+      }
+
+      // 3. If no active session, search for the most recent one (any status)
+      const lastSession = await WhatsAppSession.findOne({
+        where: { user_id: userId },
+        include: [
+          {
+            model: WhatsAppSessionStatus,
+            as: 'WhatsAppSessionStatus'
+          }
+        ],
+        order: [['updated_at', 'DESC']]
+      });
+
+      // 4. Return status of the last session
+      if (lastSession?.WhatsAppSessionStatus) {
+        this.logger.info('Last session found', { 
+          sessionId: lastSession.id, 
+          status: lastSession.WhatsAppSessionStatus.slug 
+        });
+        
+        return {
+          success: true,
+          message: 'Last session status retrieved successfully',
+          data: {
+            status: lastSession.WhatsAppSessionStatus.slug
+          }
+        };
+      }
+
+      // 5. If user has no sessions, return disconnected
+      this.logger.info('No sessions found for user', { userId });
+      
+      return {
+        success: true,
+        message: 'No sessions found for user',
+        data: {
+          status: 'disconnected'
+        }
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to get active session status', error);
+      return {
+        success: false,
+        message: 'Failed to get session status',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        data: {
+          status: 'disconnected'
+        }
       };
     }
   }

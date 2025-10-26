@@ -483,6 +483,39 @@ export class WhatsAppSessionController {
   };
 
   /**
+   * Get active session status (without requiring session ID)
+   * @route GET /api/status
+   */
+  public getActiveStatus = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = (req as any).user?.id;
+
+      if (!userId) {
+        res.status(401).json({ 
+          success: false, 
+          message: 'Unauthorized' 
+        });
+        return;
+      }
+
+      this.logger.info('Get active session status request', { userId });
+
+      const result = await this.sessionService.getActiveSessionStatus(userId);
+
+      // Return only the status object according to documentation
+      if (result.success && result.data) {
+        res.status(200).json(result.data);
+      } else {
+        res.status(200).json({ status: 'disconnected' });
+      }
+
+    } catch (error) {
+      this.logger.error('Get active session status error', error);
+      res.status(200).json({ status: 'disconnected' });
+    }
+  };
+
+  /**
    * Get user's sessions
    * @route GET /api/whatsapp-sessions/user/:userId
    */

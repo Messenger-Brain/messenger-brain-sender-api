@@ -178,6 +178,53 @@ router.get('/',
 
 /**
  * @swagger
+ * /api/whatsapp-sessions/status:
+ *   get:
+ *     summary: Get active WhatsApp session status
+ *     description: Returns the status of the authenticated user's active WhatsApp session without requiring session ID
+ *     tags: [WhatsApp Sessions]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Session status retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   enum: [connecting, connected, disconnected, need_scan, logged_out, expired]
+ *                   example: connected
+ *             examples:
+ *               connected:
+ *                 value:
+ *                   status: connected
+ *               disconnected:
+ *                 value:
+ *                   status: disconnected
+ *               need_scan:
+ *                 value:
+ *                   status: need_scan
+ *               logged_out:
+ *                 value:
+ *                   status: logged_out
+ *               expired:
+ *                 value:
+ *                   status: expired
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/status',
+  authMiddleware.authenticate,
+  sessionController.getActiveStatus
+);
+
+/**
+ * @swagger
  * /api/whatsapp-sessions:
  *   post:
  *     summary: Create a new WhatsApp session
