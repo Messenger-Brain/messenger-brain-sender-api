@@ -2,9 +2,10 @@ import { Router } from 'express';
 import { MessageController } from '../controllers/MessageController';
 import { AuthMiddleware } from '../middleware/auth';
 import { ValidationMiddleware } from '../middleware/validation';
-import { 
-  createMessageSchema, 
-  bulkMessageSchema
+import {
+  createMessageSchema,
+  bulkMessageSchema,
+  createSendMessageSchema
 } from '../schemas/validationSchemas';
 
 const router = Router();
@@ -143,7 +144,7 @@ const authMiddleware = AuthMiddleware.getInstance();
  */
 router.post('/',
   authMiddleware.authenticate,
-  validationMiddleware.validateBody(createMessageSchema),
+  validationMiddleware.validateBody(createSendMessageSchema),
   messageController.createMessage
 );
 

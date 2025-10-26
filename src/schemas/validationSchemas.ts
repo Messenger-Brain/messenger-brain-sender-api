@@ -216,3 +216,101 @@ export const imageUploadOptions = {
     'image/webp'
   ]
 };
+
+// Message Schema
+export const createSendMessageSchema = Joi.object({
+  to: Joi.string()
+    .pattern(/^(?:\+\d{8,15}|[0-9a-zA-Z-]+@[a-zA-Z0-9.]+)$/) // Teléfono E.164 o JID de grupo/canal
+    .required()
+    .messages({
+      'string.pattern.base': 'El campo "to" debe ser un número E.164 o un JID válido'
+    }),
+
+  replyTo: Joi.number().integer().optional(),
+
+  // Text content
+  text: Joi.string().max(4096).optional(),
+
+  // Media content
+  imageUrl: Joi.string().uri().optional(),
+  videoUrl: Joi.string().uri().optional(),
+  documentUrl: Joi.string().uri().optional(),
+  audioUrl: Joi.string().uri().optional(),
+  stickerUrl: Joi.string().uri().optional(),
+
+  // Contact object
+  contact: Joi.object({
+    name: Joi.string().max(200).required(),
+    phoneNumber: Joi.string().required()
+  }).optional(),
+
+  // Location object
+  location: Joi.object({
+    latitude: Joi.number().min(-90).max(90).required(),
+    longitude: Joi.number().min(-180).max(180).required()
+  }).optional(),
+
+  // Poll object
+  poll: Joi.object({
+    question: Joi.string().max(255).required(),
+    options: Joi.array().items(Joi.string().max(255)).min(2).max(12).required(),
+    multiSelect: Joi.boolean().default(false)
+  }).optional(),
+
+  // Document-specific field
+  fileName: Joi.string().max(255).optional(),
+
+  // Quoted messages
+  quoteMessageId: Joi.number().integer().optional()
+})
+  .custom((value, helpers) => {
+    const {
+      text,
+      imageUrl,
+      videoUrl,
+      documentUrl,
+      audioUrl,
+      stickerUrl,
+      contact,
+      location,
+      poll,
+    } = value;
+
+    // Tipos de contenido admitidos (solo uno a la vez)
+    const contentTypes = [
+      { field: 'imageUrl', value: imageUrl },
+      { field: 'videoUrl', value: videoUrl },
+      { field: 'documentUrl', value: documentUrl },
+      { field: 'audioUrl', value: audioUrl },
+      { field: 'stickerUrl', value: stickerUrl },
+      { field: 'contact', value: contact },
+      { field: 'location', value: location },
+      { field: 'poll', value: poll }
+    ];
+
+    const presentTypes = contentTypes.filter(item => !!item.value);
+
+    // REGLA 1: Al menos un tipo de contenido (text o alguno más)
+    if (presentTypes.length === 0 && !text) {
+      return helpers.error('any.custom', {
+        message: 'Debe proporcionar al menos un tipo de contenido: text, media, contact, location o poll.'
+      });
+    }
+
+    // REGLA 2: Solo un tipo de contenido multimedia/contacto/ubicación/poll
+    if (presentTypes.length > 1) {
+      const presentFields = presentTypes.map(i => i.field).join(', ');
+      return helpers.error('any.custom', {
+        message: `Solo puede enviar un tipo de contenido a la vez. Campos presentes: ${presentFields}`
+      });
+    }
+
+    // REGLA 3: fileName solo válido si hay documentUrl
+    if (value.fileName && !documentUrl) {
+      return helpers.error('any.custom', {
+        message: 'El campo fileName solo puede usarse cuando se envía documentUrl.'
+      });
+    }
+
+    return value;
+  }, 'Validación personalizada');
