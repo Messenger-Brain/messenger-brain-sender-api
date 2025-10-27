@@ -11,6 +11,8 @@ export interface AppConfiguration {
   rateLimit: RateLimitConfiguration;
   logging: LoggingConfiguration;
   puppeteer: PuppeteerConfiguration;
+  resend: ResendConfiguration;
+  app: GeneralAppConfiguration;
 }
 
 export interface ServerConfiguration {
@@ -70,6 +72,15 @@ export interface PuppeteerConfiguration {
   navigationTimeout: number;
 }
 
+export interface ResendConfiguration {
+  apiKey: string;
+  fromEmail: string;
+}
+
+export interface GeneralAppConfiguration {
+  frontendUrl: string;
+}
+
 export class ConfigService {
   private static instance: ConfigService;
   private config: AppConfiguration;
@@ -95,6 +106,8 @@ export class ConfigService {
       rateLimit: this.loadRateLimitConfiguration(),
       logging: this.loadLoggingConfiguration(),
       puppeteer: this.loadPuppeteerConfiguration(),
+      resend: this.loadResendConfiguration(),
+      app: this.loadGeneralAppConfiguration(),
     };
   }
 
@@ -172,6 +185,19 @@ export class ConfigService {
     };
   }
 
+  private loadResendConfiguration(): ResendConfiguration {
+    return {
+      apiKey: process.env.RESEND_API_KEY || '',
+      fromEmail: process.env.RESEND_FROM_EMAIL || 'Messenger Brain <onboarding@resend.dev>',
+    };
+  }
+
+  private loadGeneralAppConfiguration(): GeneralAppConfiguration {
+    return {
+      frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+    };
+  }
+
   public getConfig(): AppConfiguration {
     return this.config;
   }
@@ -206,6 +232,14 @@ export class ConfigService {
 
   public getPuppeteerConfig(): PuppeteerConfiguration {
     return this.config.puppeteer;
+  }
+
+  public getResendConfig(): ResendConfiguration {
+    return this.config.resend;
+  }
+
+  public getAppConfig(): GeneralAppConfiguration {
+    return this.config.app;
   }
 
   public isDevelopment(): boolean {

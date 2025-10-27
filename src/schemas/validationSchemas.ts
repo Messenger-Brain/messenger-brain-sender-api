@@ -69,6 +69,27 @@ export const updateProfileSchema = Joi.object({
     'string.pattern.base': 'Phone number must start with + and contain only digits',
     'string.min': 'Phone number must be at least {#limit} characters',
     'string.max': 'Phone number must be at most {#limit} characters'
+  }),
+  avatar: Joi.string().uri().max(255).allow('', null).optional().messages({
+    'string.uri': 'Avatar must be a valid URL',
+    'string.max': 'Avatar URL must be at most {#limit} characters'
+  })
+});
+
+// Confirm delete profile schema (with token from email)
+export const confirmDeleteProfileSchema = Joi.object({
+  token: Joi.string().required().messages({
+    'string.empty': 'Token is required',
+    'any.required': 'Token is required'
+  }),
+  password: Joi.string().required().messages({
+    'string.empty': 'Password is required',
+    'any.required': 'Password is required'
+  }),
+  confirmation: Joi.string().valid('DELETE').required().messages({
+    'any.only': 'Confirmation must be "DELETE"',
+    'string.empty': 'Confirmation is required',
+    'any.required': 'Confirmation is required'
   })
 });
 

@@ -14,6 +14,12 @@ module.exports = {
         description: 'Token de renovación JWT',
         created_at: new Date(),
         updated_at: new Date()
+      },
+      {
+        slug: 'delete_account',
+        description: 'Token para confirmar eliminación de cuenta',
+        created_at: new Date(),
+        updated_at: new Date()
       }
     ]);
   },
