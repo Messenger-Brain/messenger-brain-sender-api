@@ -6,6 +6,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as https from 'https';
 import * as http from 'http';
+import sharp from 'sharp';
 
 export interface MessageSendResult {
     success: boolean;
@@ -904,6 +905,25 @@ export class PuppeteerWhatsappMessageService {
             this.logger.warn('Could not cleanup temp file', { filePath, error });
         }
     }
+
+    private async convertToWebp(inputPath: string): Promise<string> {
+        const outputPath = inputPath.replace(path.extname(inputPath), '.webp');
+
+        this.logger.debug('Converting file to .webp', { inputPath, outputPath });
+
+        try {
+            await sharp(inputPath)
+                .resize(512, 512, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }) // tamaño óptimo para sticker
+                .webp({ quality: 100 })
+                .toFile(outputPath);
+
+            return outputPath;
+        } catch (error) {
+            this.logger.error('Error converting to .webp', error);
+            throw error;
+        }
+    }
 }
+
 
 export default PuppeteerWhatsappMessageService;
