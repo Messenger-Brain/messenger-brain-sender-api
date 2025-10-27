@@ -20,6 +20,88 @@ export class SubscriptionController {
     this.rateLimitMiddleware = RateLimitMiddleware.getInstance();
     this.logger = Logger;
   }
+  
+  /**
+   * Create a new subscription plan (Admin only)
+   */
+  public createSubscriptionPlan = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const subscriptionData = {
+        slug: req.body.slug,
+        description: req.body.description,
+        statusId: req.body.statusId,
+        price: req.body.price
+      };
+      
+      const result = await this.subscriptionService.createSubscription(subscriptionData);
+      
+      if (result.success) {
+        res.status(201).json(result);
+      } else {
+        res.status(400).json(result);
+      }
+    } catch (error) {
+      this.logger.error('Error creating subscription plan', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  };
+  
+  /**
+   * Update subscription plan (Admin only)
+   */
+  public updateSubscriptionPlan = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const subscriptionId = parseInt((req.params.id as string) || '0');
+      const subscriptionData = {
+        slug: req.body.slug,
+        description: req.body.description,
+        statusId: req.body.statusId,
+        price: req.body.price
+      };
+      
+      // If we're updating the slug, check if it already exists
+      if (subscriptionData.slug) {
+        const existingWithSlug = await this.subscriptionService.getSubscriptionBySlug(subscriptionData.slug);
+        if (existingWithSlug && existingWithSlug.id !== subscriptionId) {
+          res.status(400).json({
+            success: false,
+            message: `A subscription with slug "${subscriptionData.slug}" already exists`
+          });
+          return;
+        }
+      }
+      
+      const result = await this.subscriptionService.updateSubscription(subscriptionId, subscriptionData);
+      
+      if (result.success) {
+        res.status(200).json(result);
+      } else {
+        // If subscription was not found, return 404
+        res.status(result.message === 'Subscription not found' ? 404 : 400).json(result);
+      }
+    } catch (error) {
+      this.logger.error('Error updating subscription plan', error);
+      
+      // Handle unique constraint violation error
+      if (error instanceof Error && error.name === 'SequelizeUniqueConstraintError') {
+        res.status(400).json({
+          success: false,
+          message: 'A subscription with this slug already exists'
+        });
+        return;
+      }
+      
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  };
 
   /**
    * Get all available subscriptions
@@ -180,6 +262,34 @@ export class SubscriptionController {
       }
     } catch (error) {
       this.logger.error('Error getting subscription stats', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  };
+
+  /**
+   * Delete subscription plan (Admin only)
+   */
+  public deleteSubscriptionPlan = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const subscriptionId = parseInt((req.params.id as string) || '0');
+      if (!subscriptionId || Number.isNaN(subscriptionId) || subscriptionId <= 0) {
+        res.status(400).json({ success: false, message: 'Invalid subscription id' });
+        return;
+      }
+
+      const result = await this.subscriptionService.deleteSubscription(subscriptionId);
+
+      if (result.success) {
+        res.status(200).json(result);
+      } else {
+        res.status(result.message === 'Subscription not found' ? 404 : 400).json(result);
+      }
+    } catch (error) {
+      this.logger.error('Error deleting subscription plan', error);
       res.status(500).json({
         success: false,
         message: 'Internal server error',
