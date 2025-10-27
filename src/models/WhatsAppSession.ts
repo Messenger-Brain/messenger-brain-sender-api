@@ -4,6 +4,7 @@ import { sequelize } from '../config/sequelize';
 // WhatsAppSession attributes interface
 interface WhatsAppSessionAttributes {
   id: number;
+  api_key: string;
   name: string;
   user_id: number;
   phone_number: string;
@@ -23,6 +24,7 @@ interface WhatsAppSessionCreationAttributes extends Optional<WhatsAppSessionAttr
 // WhatsAppSession model class
 class WhatsAppSession extends Model<WhatsAppSessionAttributes, WhatsAppSessionCreationAttributes> implements WhatsAppSessionAttributes {
   public id!: number;
+  public api_key!: string;
   public name!: string;
   public user_id!: number;
   public phone_number!: string;
@@ -54,6 +56,14 @@ WhatsAppSession.init(
       type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true,
+    },
+    api_key: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+      unique: true,
+      validate: {
+        notEmpty: true,
+      },
     },
     name: {
       type: DataTypes.STRING(200),
