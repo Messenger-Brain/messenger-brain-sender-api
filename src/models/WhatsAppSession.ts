@@ -12,6 +12,7 @@ interface WhatsAppSessionAttributes {
   log_messages: boolean;
   webhook_url?: string;
   webhook_enabled: boolean;
+  webhook_events?: string[] | null;
   browser_context_id?: number;
   created_at?: Date;
   updated_at?: Date;
@@ -31,6 +32,7 @@ class WhatsAppSession extends Model<WhatsAppSessionAttributes, WhatsAppSessionCr
   public log_messages!: boolean;
   public webhook_url?: string;
   public webhook_enabled!: boolean;
+  public webhook_events?: string[] | null;
   public browser_context_id?: number;
   public readonly created_at!: Date;
   public readonly updated_at!: Date;
@@ -110,6 +112,11 @@ WhatsAppSession.init(
       allowNull: false,
       defaultValue: false,
     },
+    webhook_events: {
+     type: DataTypes.JSON,
+     allowNull: true,
+     defaultValue: []
+   },
     browser_context_id: {
       type: DataTypes.INTEGER,
       allowNull: true,

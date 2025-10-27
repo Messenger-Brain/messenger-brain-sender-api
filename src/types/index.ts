@@ -137,6 +137,7 @@ export interface CreateWhatsAppSessionRequest {
   logMessages: boolean;
   webhookUrl?: string;
   webhookEnabled: boolean;
+  webhookEvents?: string[];
   browserContextId?: number;
 }
 
@@ -147,6 +148,7 @@ export interface UpdateWhatsAppSessionRequest {
   logMessages?: boolean;
   webhookUrl?: string;
   webhookEnabled?: boolean;
+  webhookEvents?: string[];
   browserContextId?: number;
 }
 
