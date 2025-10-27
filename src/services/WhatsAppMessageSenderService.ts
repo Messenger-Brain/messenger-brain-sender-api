@@ -8,17 +8,20 @@ import MessageStatus from '../models/MessageStatus';
 import Logger from '../utils/logger';
 import { ApiResponse } from '../types';
 import BrowserContextStatus from '../models/BrowserContextStatus';
+import PuppeteerWhatsappMessageService from './PuppeterWhatsappMessageService';
 
 export class WhatsAppMessageSenderService {
   private static instance: WhatsAppMessageSenderService;
   private browserContextService: BrowserContextService;
   private messageQueueService: MessageQueueService;
+  private puppeteerService: PuppeteerWhatsappMessageService;
   private logger: typeof Logger;
   private isProcessing: boolean = false;
 
   private constructor() {
     this.browserContextService = BrowserContextService.getInstance();
     this.messageQueueService = MessageQueueService.getInstance();
+    this.puppeteerService = PuppeteerWhatsappMessageService.getInstance();
     this.logger = Logger;
     this.setupWorkers();
   }

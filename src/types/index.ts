@@ -161,6 +161,14 @@ export interface CreateMessageRequest {
   result?: any;
 }
 
+export interface MessageResponse {
+  msgId: number;
+  jid: string;
+  status: 'in_progress' | 'sent' | 'failed' | 'queued';
+  message?: string;
+  timestamp?: string;
+}
+
 export interface UpdateMessageRequest {
   statusId?: number;
   result?: any;
