@@ -60,12 +60,11 @@ export class PuppeteerWhatsappMessageService {
                 hasReply: !!options.replyTo
             });
 
-            // Verificar que tenemos la página del contexto
             if (!browserContext.page) {
                 throw new Error('No page available in browser context');
             }
 
-            // Usar la página del contexto para interactuar con WhatsApp
+            // Usa la página del contexto para interactuar con WhatsApp
             const result = await this.sendMessageWithPage(
                 browserContext.page,
                 to,
@@ -118,10 +117,10 @@ export class PuppeteerWhatsappMessageService {
         options: SendMessageOptions = {}
     ): Promise<MessageSendResult> {
         try {
-            // Navegar al chat específico
+            // Navega al chat específico
             await this.navigateToChat(page, to);
 
-            // Determinar el tipo de mensaje y enviar según corresponda
+            // Determina el tipo de mensaje y envía según corresponde
             const messageType = this.determineMessageType(messageData);
 
             this.logger.info(`Sending ${messageType} message`, { to });
@@ -173,7 +172,7 @@ export class PuppeteerWhatsappMessageService {
     }
 
     /**
-     * Navegar al chat específico usando la página
+     * Navega al chat específico usando la página
      */
     private async navigateToChat(page: Page, to: string): Promise<void> {
         this.logger.info('Navigating to chat', { to });
@@ -183,10 +182,10 @@ export class PuppeteerWhatsappMessageService {
             const chatUrl = `https://web.whatsapp.com/send?phone=${to}`;
             await page.goto(chatUrl, { waitUntil: 'networkidle2', timeout: 30000 });
 
-            // Esperar a que cargue la interfaz de WhatsApp
+            // Espera a que se cargue la interfaz de WhatsApp
             await page.waitForSelector('div[contenteditable="true"][data-tab="10"]', { timeout: 30000 });
 
-            // Esperar adicional para asegurar carga completa (CORREGIDO)
+            // Espera adicional para asegurar que este listo
             await this.delay(2000);
 
             this.logger.info('Navigated to chat successfully', { to });
@@ -220,7 +219,7 @@ export class PuppeteerWhatsappMessageService {
                 throw new Error('No se encontró el campo de texto de WhatsApp');
             }
 
-            // Limpiar campo y escribir texto
+            // Limpia el campo y escribe texto
             await page.evaluate(() => {
                 const d = (globalThis as any).document;
                 const element = d.querySelector('div[contenteditable="true"][data-tab="10"]') as any;
@@ -232,10 +231,8 @@ export class PuppeteerWhatsappMessageService {
 
             await messageInput.type(text, { delay: 50 });
 
-            // Presionar Enter para enviar
             await messageInput.press('Enter');
 
-            // Esperar a que se envíe el mensaje (CORREGIDO)
             await this.delay(2000);
 
             const duration = Date.now() - startTime;
@@ -271,30 +268,29 @@ export class PuppeteerWhatsappMessageService {
         try {
             this.logger.debug('Sending image message', { imageUrl, hasCaption: !!caption });
 
-            // Abrir selector de archivos
+            // Abre el selector de archivos
             const attachmentButton = await page.waitForSelector('button[data-tab="11"]');
             if (!attachmentButton) {
                 throw new Error('No se encontró el botón de adjuntar');
             }
             await attachmentButton.click();
 
-            // Esperar menú de adjuntos (CORREGIDO)
             await this.delay(1000);
 
-            // Seleccionar opción de imagen
+            // Selecciona opción de imagen
             const imageOption = await page.waitForSelector('input[accept="image/*,video/mp4,video/3gpp,video/quicktime"]');
             if (!imageOption) {
                 throw new Error('No se encontró la opción para subir imagen');
             }
 
-            // Descargar y subir imagen
+            // Descarga en/temp para poder subir imagen
             const tempFilePath = await this.downloadFileToTemp(imageUrl);
             await imageOption.uploadFile(tempFilePath);
 
-            // Esperar a que cargue la previsualización
+            // Espera a que cargue la previsualización
             await page.waitForSelector('div[data-tab="7"]', { timeout: 10000 });
 
-            // Agregar caption si existe
+            // Agrega caption si existe
             if (caption) {
                 const captionInput = await page.waitForSelector('div[contenteditable="true"][data-tab="7"]');
                 if (captionInput) {
@@ -302,14 +298,13 @@ export class PuppeteerWhatsappMessageService {
                 }
             }
 
-            // Enviar mensaje
+            // Envia mensaje
             const sendButton = await page.waitForSelector('span[data-icon="send"]');
             if (!sendButton) {
                 throw new Error('No se encontró el botón enviar');
             }
             await sendButton.click();
 
-            // Esperar a que se envíe (CORREGIDO)
             await this.delay(3000);
 
             // Limpiar archivo temporal
@@ -335,7 +330,7 @@ export class PuppeteerWhatsappMessageService {
     }
 
     /**
-     * Enviar mensaje con video (similar a imagen)
+     * Enviar mensaje con video
      */
     private async sendVideoMessage(
         page: Page,
@@ -354,7 +349,6 @@ export class PuppeteerWhatsappMessageService {
             }
             await attachmentButton.click();
 
-            // CORREGIDO
             await this.delay(1000);
 
             const videoOption = await page.waitForSelector('input[accept="image/*,video/mp4,video/3gpp,video/quicktime"]');
@@ -380,7 +374,6 @@ export class PuppeteerWhatsappMessageService {
             }
             await sendButton.click();
 
-            // CORREGIDO
             await this.delay(4000);
 
             this.cleanupTempFile(tempFilePath);
@@ -429,10 +422,9 @@ export class PuppeteerWhatsappMessageService {
             }
             await attachmentButton.click();
 
-            // CORREGIDO
             await this.delay(1000);
 
-            // Seleccionar opción de documento
+            // Selecciona documento
             const documentOption = await page.waitForSelector('input[accept="*"]');
             if (!documentOption) {
                 throw new Error('No se encontró la opción para subir documento');
@@ -441,10 +433,9 @@ export class PuppeteerWhatsappMessageService {
             const tempFilePath = await this.downloadFileToTemp(documentUrl);
             await documentOption.uploadFile(tempFilePath);
 
-            // Esperar a que cargue
+            // Espera a que cargue
             await page.waitForSelector('div[data-tab="7"]', { timeout: 10000 });
 
-            // Cambiar nombre del archivo si se proporciona
             if (fileName) {
                 const fileNameInput = await page.waitForSelector('input[data-tab="7"]');
                 if (fileNameInput) {
@@ -453,7 +444,7 @@ export class PuppeteerWhatsappMessageService {
                 }
             }
 
-            // Agregar caption si existe
+            // Agrega caption si existe
             if (caption) {
                 const captionInput = await page.waitForSelector('div[contenteditable="true"][data-tab="8"]');
                 if (captionInput) {
@@ -467,7 +458,6 @@ export class PuppeteerWhatsappMessageService {
             }
             await sendButton.click();
 
-            // CORREGIDO
             await this.delay(3000);
 
             this.cleanupTempFile(tempFilePath);
@@ -511,7 +501,6 @@ export class PuppeteerWhatsappMessageService {
             }
             await attachmentButton.click();
 
-            // CORREGIDO
             await this.delay(1000);
 
             const audioOption = await page.waitForSelector('input[accept="*"]');
@@ -530,7 +519,6 @@ export class PuppeteerWhatsappMessageService {
             }
             await sendButton.click();
 
-            // CORREGIDO
             await this.delay(3000);
 
             this.cleanupTempFile(tempFilePath);
@@ -573,20 +561,18 @@ export class PuppeteerWhatsappMessageService {
             }
             await attachmentButton.click();
 
-            // CORREGIDO
             await this.delay(1000);
 
-            // Seleccionar opción de sticker
+            // Selecciona opción de sticker
             const stickerOption = await page.$('span[data-icon="sticker"]');
             if (!stickerOption) {
                 throw new Error('No se encontró la opción de sticker');
             }
             await stickerOption.click();
 
-            // CORREGIDO
             await this.delay(2000);
 
-            // Implementación básica - subir sticker como imagen
+            // Se sube una imagen en .webp - whatsapp la convierte en sticker
             const stickerInput = await page.waitForSelector('input[accept="image/*"]');
             if (stickerInput) {
                 const tempFilePath = await this.downloadFileToTemp(stickerUrl);
@@ -639,27 +625,25 @@ export class PuppeteerWhatsappMessageService {
             }
             await attachmentButton.click();
 
-            // CORREGIDO
             await this.delay(1000);
 
-            // Seleccionar opción de contacto
+            // Selecciona contacto
             const contactOption = await page.$('span[data-icon="contact"]');
             if (!contactOption) {
                 throw new Error('No se encontró la opción de contacto');
             }
             await contactOption.click();
 
-            // CORREGIDO
             await this.delay(2000);
 
-            // Buscar y seleccionar el contacto
+            // Busca selecciona el contacto
             const searchInput = await page.$('input[data-tab="3"]');
             if (searchInput) {
                 await searchInput.type(contact.phoneNumber, { delay: 50 });
                 await this.delay(1000);
             }
 
-            // Seleccionar el primer resultado
+            // Selecciona el primer resultado
             const contactResult = await page.$('div[data-tab="3"] > div > div');
             if (contactResult) {
                 await contactResult.click();
@@ -672,7 +656,6 @@ export class PuppeteerWhatsappMessageService {
             }
             await sendButton.click();
 
-            // CORREGIDO
             await this.delay(2000);
 
             const duration = Date.now() - startTime;
@@ -717,27 +700,24 @@ export class PuppeteerWhatsappMessageService {
             }
             await attachmentButton.click();
 
-            // CORREGIDO
             await this.delay(1000);
 
-            // Seleccionar opción de ubicación
+            // Selecciona ubicación
             const locationOption = await page.$('span[data-icon="location"]');
             if (!locationOption) {
                 throw new Error('No se encontró la opción de ubicación');
             }
             await locationOption.click();
 
-            // CORREGIDO
             await this.delay(3000);
 
-            // Enviar ubicación actual
+            // Envia ubicación actual
             const sendButton = await page.waitForSelector('span[data-icon="send"]');
             if (!sendButton) {
                 throw new Error('No se encontró el botón enviar');
             }
             await sendButton.click();
 
-            // CORREGIDO
             await this.delay(2000);
 
             const duration = Date.now() - startTime;
@@ -781,26 +761,24 @@ export class PuppeteerWhatsappMessageService {
             }
             await attachmentButton.click();
 
-            // CORREGIDO
             await this.delay(1000);
 
-            // Seleccionar opción de encuesta
+            // Selecciona encuesta
             const pollOption = await page.$('span[data-icon="poll"]');
             if (!pollOption) {
                 throw new Error('No se encontró la opción de encuesta');
             }
             await pollOption.click();
 
-            // CORREGIDO
             await this.delay(2000);
 
-            // Llenar pregunta
+            // Llena pregunta
             const questionInput = await page.$('div[contenteditable="true"][data-tab="6"]');
             if (questionInput) {
                 await questionInput.type(poll.question, { delay: 50 });
             }
 
-            // Llenar opciones
+            // Llena opciones
             for (let i = 0; i < Math.min(poll.options.length, 12); i++) {
                 const optionInput = await page.$(`input[data-tab="${i + 7}"]`);
                 if (optionInput) {
@@ -815,7 +793,6 @@ export class PuppeteerWhatsappMessageService {
             }
             await sendButton.click();
 
-            // CORREGIDO
             await this.delay(2000);
 
             const duration = Date.now() - startTime;
@@ -862,7 +839,6 @@ export class PuppeteerWhatsappMessageService {
     private async replyToMessage(page: Page, messageId: string): Promise<void> {
         try {
             this.logger.debug('Replying to message', { messageId });
-            // CORREGIDO
             await this.delay(1000);
         } catch (error) {
             this.logger.warn('Could not reply to message, sending as normal message', { messageId });
@@ -870,14 +846,14 @@ export class PuppeteerWhatsappMessageService {
     }
 
     /**
-     * Función auxiliar para delays (REEMPLAZA waitForTimeout)
+     * Función auxiliar para delays 
      */
     private delay(ms: number): Promise<void> {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     /**
-     * Utilidades para manejo de archivos temporales
+     * Utilidad para manejo de archivos temporales
      */
     private ensureTempDir(): void {
         if (!fs.existsSync(this.tempDir)) {
