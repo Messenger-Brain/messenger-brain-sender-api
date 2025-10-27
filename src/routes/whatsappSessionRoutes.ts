@@ -1,14 +1,14 @@
-import { Router } from 'express';
-import { WhatsAppSessionController } from '../controllers/WhatsAppSessionController';
-import { AuthMiddleware } from '../middleware/auth';
-import { ValidationMiddleware } from '../middleware/validation';
-import { 
-  createWhatsAppSessionSchema, 
-  updateWhatsAppSessionSchema,
-  sessionFilterSchema,
-  idParamSchema,
-  sessionIdParamSchema
-} from '../schemas/validationSchemas';
+import { Router } from "express";
+import { WhatsAppSessionController } from "../controllers/WhatsAppSessionController";
+import { AuthMiddleware } from "../middleware/auth";
+import { ValidationMiddleware } from "../middleware/validation";
+import {
+	createWhatsAppSessionSchema,
+	updateWhatsAppSessionSchema,
+	sessionFilterSchema,
+	idParamSchema,
+	sessionIdParamSchema,
+} from "../schemas/validationSchemas";
 
 const router = Router();
 const sessionController = new WhatsAppSessionController();
@@ -38,6 +38,10 @@ const authMiddleware = AuthMiddleware.getInstance();
  *           type: string
  *         webhookEnabled:
  *           type: boolean
+ *         webhook_events:
+ *           type: array
+ *           items:
+ *             type: string
  *         browserContextId:
  *           type: number
  *         userId:
@@ -170,10 +174,11 @@ const authMiddleware = AuthMiddleware.getInstance();
  *       500:
  *         description: Internal server error
  */
-router.get('/',
-  authMiddleware.authenticate,
-  validationMiddleware.validateQuery(sessionFilterSchema),
-  sessionController.getSessions
+router.get(
+	"/",
+	authMiddleware.authenticate,
+	validationMiddleware.validateQuery(sessionFilterSchema),
+	sessionController.getSessions
 );
 
 /**
@@ -211,10 +216,11 @@ router.get('/',
  *       500:
  *         description: Internal server error
  */
-router.post('/',
-  authMiddleware.authenticate,
-  validationMiddleware.validateBody(createWhatsAppSessionSchema),
-  sessionController.createSession
+router.post(
+	"/",
+	authMiddleware.authenticate,
+	validationMiddleware.validateBody(createWhatsAppSessionSchema),
+	sessionController.createSession
 );
 
 /**
@@ -250,10 +256,11 @@ router.post('/',
  *       500:
  *         description: Internal server error
  */
-router.get('/:id',
-  authMiddleware.authenticate,
-  validationMiddleware.validateParams(idParamSchema),
-  sessionController.getSessionById
+router.get(
+	"/:id",
+	authMiddleware.authenticate,
+	validationMiddleware.validateParams(idParamSchema),
+	sessionController.getSessionById
 );
 
 /**
@@ -299,11 +306,12 @@ router.get('/:id',
  *       500:
  *         description: Internal server error
  */
-router.put('/:id',
-  authMiddleware.authenticate,
-  validationMiddleware.validateParams(idParamSchema),
-  validationMiddleware.validateBody(updateWhatsAppSessionSchema),
-  sessionController.updateSession
+router.put(
+	"/:id",
+	authMiddleware.authenticate,
+	validationMiddleware.validateParams(idParamSchema),
+	validationMiddleware.validateBody(updateWhatsAppSessionSchema),
+	sessionController.updateSession
 );
 
 /**
@@ -339,10 +347,11 @@ router.put('/:id',
  *       500:
  *         description: Internal server error
  */
-router.delete('/:id',
-  authMiddleware.authenticate,
-  validationMiddleware.validateParams(idParamSchema),
-  sessionController.deleteSession
+router.delete(
+	"/:id",
+	authMiddleware.authenticate,
+	validationMiddleware.validateParams(idParamSchema),
+	sessionController.deleteSession
 );
 
 /**
@@ -385,10 +394,11 @@ router.delete('/:id',
  *       500:
  *         description: Internal server error
  */
-router.post('/:id/connect',
-  authMiddleware.authenticate,
-  validationMiddleware.validateParams(idParamSchema),
-  sessionController.connectSession
+router.post(
+	"/:id/connect",
+	authMiddleware.authenticate,
+	validationMiddleware.validateParams(idParamSchema),
+	sessionController.connectSession
 );
 
 /**
@@ -424,10 +434,11 @@ router.post('/:id/connect',
  *       500:
  *         description: Internal server error
  */
-router.post('/:id/disconnect',
-  authMiddleware.authenticate,
-  validationMiddleware.validateParams(idParamSchema),
-  sessionController.disconnectSession
+router.post(
+	"/:id/disconnect",
+	authMiddleware.authenticate,
+	validationMiddleware.validateParams(idParamSchema),
+	sessionController.disconnectSession
 );
 
 /**
@@ -463,10 +474,11 @@ router.post('/:id/disconnect',
  *       500:
  *         description: Internal server error
  */
-router.post('/:id/select',
-  authMiddleware.authenticate,
-  validationMiddleware.validateParams(idParamSchema),
-  sessionController.selectSession
+router.post(
+	"/:id/select",
+	authMiddleware.authenticate,
+	validationMiddleware.validateParams(idParamSchema),
+	sessionController.selectSession
 );
 
 /**
@@ -508,10 +520,11 @@ router.post('/:id/select',
  *       500:
  *         description: Internal server error
  */
-router.get('/:id/qr',
-  authMiddleware.authenticate,
-  validationMiddleware.validateParams(idParamSchema),
-  sessionController.getSessionQR
+router.get(
+	"/:id/qr",
+	authMiddleware.authenticate,
+	validationMiddleware.validateParams(idParamSchema),
+	sessionController.getSessionQR
 );
 
 /**
@@ -555,10 +568,11 @@ router.get('/:id/qr',
  *       500:
  *         description: Internal server error
  */
-router.post('/:id/qr/refresh',
-  authMiddleware.authenticate,
-  validationMiddleware.validateParams(idParamSchema),
-  sessionController.refreshQR
+router.post(
+	"/:id/qr/refresh",
+	authMiddleware.authenticate,
+	validationMiddleware.validateParams(idParamSchema),
+	sessionController.refreshQR
 );
 
 /**
@@ -604,10 +618,11 @@ router.post('/:id/qr/refresh',
  *       500:
  *         description: Internal server error
  */
-router.get('/:id/status',
-  authMiddleware.authenticate,
-  validationMiddleware.validateParams(idParamSchema),
-  sessionController.getSessionStatus
+router.get(
+	"/:id/status",
+	authMiddleware.authenticate,
+	validationMiddleware.validateParams(idParamSchema),
+	sessionController.getSessionStatus
 );
 
 /**
@@ -644,9 +659,10 @@ router.get('/:id/status',
  *       500:
  *         description: Internal server error
  */
-router.get('/stats',
-  authMiddleware.authenticate,
-  sessionController.getSessionStats
+router.get(
+	"/stats",
+	authMiddleware.authenticate,
+	sessionController.getSessionStats
 );
 
 export default router;
