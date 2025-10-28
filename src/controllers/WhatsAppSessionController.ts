@@ -1,612 +1,784 @@
-import { Request, Response } from 'express';
-import { WhatsAppSessionService } from '../services/WhatsAppSessionService';
-import { ValidationMiddleware } from '../middleware/validation';
-import { LoggingMiddleware } from '../middleware/logging';
-import { RateLimitMiddleware } from '../middleware/rateLimit';
-import Logger from '../utils/logger';
-import Joi from 'joi';
+import { Request, Response } from "express";
+import { WhatsAppSessionService } from "../services/WhatsAppSessionService";
+import { ValidationMiddleware } from "../middleware/validation";
+import { LoggingMiddleware } from "../middleware/logging";
+import { RateLimitMiddleware } from "../middleware/rateLimit";
+import Logger from "../utils/logger";
+import Joi from "joi";
 
 export class WhatsAppSessionController {
-  private static instance: WhatsAppSessionController;
-  private sessionService: WhatsAppSessionService;
-  private validationMiddleware: ValidationMiddleware;
-  private loggingMiddleware: LoggingMiddleware;
-  private rateLimitMiddleware: RateLimitMiddleware;
-  private logger: typeof Logger;
+	private static instance: WhatsAppSessionController;
+	private sessionService: WhatsAppSessionService;
+	private validationMiddleware: ValidationMiddleware;
+	private loggingMiddleware: LoggingMiddleware;
+	private rateLimitMiddleware: RateLimitMiddleware;
+	private logger: typeof Logger;
 
-  constructor() {
-    this.sessionService = WhatsAppSessionService.getInstance();
-    this.validationMiddleware = ValidationMiddleware.getInstance();
-    this.loggingMiddleware = LoggingMiddleware.getInstance();
-    this.rateLimitMiddleware = RateLimitMiddleware.getInstance();
-    this.logger = Logger;
-  }
+	constructor() {
+		this.sessionService = WhatsAppSessionService.getInstance();
+		this.validationMiddleware = ValidationMiddleware.getInstance();
+		this.loggingMiddleware = LoggingMiddleware.getInstance();
+		this.rateLimitMiddleware = RateLimitMiddleware.getInstance();
+		this.logger = Logger;
+	}
 
-  public static getInstance(): WhatsAppSessionController {
-    if (!WhatsAppSessionController.instance) {
-      WhatsAppSessionController.instance = new WhatsAppSessionController();
-    }
-    return WhatsAppSessionController.instance;
-  }
+	public static getInstance(): WhatsAppSessionController {
+		if (!WhatsAppSessionController.instance) {
+			WhatsAppSessionController.instance = new WhatsAppSessionController();
+		}
+		return WhatsAppSessionController.instance;
+	}
 
-  /**
-   * Validation schemas
-   */
-  private readonly createSessionSchema = Joi.object({
-    name: Joi.string().min(2).max(200).required(),
-    phone_number: Joi.string().pattern(/^\+?[1-9]\d{1,14}$/).required(),
-    countryPrefix: Joi.string().max(10).default('+506'),
-    account_protection: Joi.boolean().default(true),
-    log_messages: Joi.boolean().default(true),
-    readIncomingMessages: Joi.boolean().default(false),
-    autoRejectCalls: Joi.boolean().default(false),
-    webhook_url: Joi.string().uri().optional(),
-    webhook_enabled: Joi.boolean().default(false),
-    webhookEvents: Joi.array().items(Joi.string()).default(['session.status'])
-  });
+	/**
+	 * Validation schemas
+	 */
+	private readonly createSessionSchema = Joi.object({
+		name: Joi.string().min(2).max(200).required(),
+		phone_number: Joi.string()
+			.pattern(/^\+?[1-9]\d{1,14}$/)
+			.required(),
+		countryPrefix: Joi.string().max(10).default("+506"),
+		account_protection: Joi.boolean().default(true),
+		log_messages: Joi.boolean().default(true),
+		readIncomingMessages: Joi.boolean().default(false),
+		autoRejectCalls: Joi.boolean().default(false),
+		webhook_url: Joi.string().uri().optional(),
+		webhook_enabled: Joi.boolean().default(false),
+		webhookEvents: Joi.array().items(Joi.string()).default(["session.status"]),
+	});
 
-  private readonly updateSessionSchema = Joi.object({
-    name: Joi.string().min(2).max(200).optional(),
-    account_protection: Joi.boolean().optional(),
-    log_messages: Joi.boolean().optional(),
-    readIncomingMessages: Joi.boolean().optional(),
-    autoRejectCalls: Joi.boolean().optional(),
-    webhook_url: Joi.string().uri().optional(),
-    webhook_enabled: Joi.boolean().optional(),
-    webhookEvents: Joi.array().items(Joi.string()).optional()
-  });
+	private readonly updateSessionSchema = Joi.object({
+		name: Joi.string().min(2).max(200).optional(),
+		account_protection: Joi.boolean().optional(),
+		log_messages: Joi.boolean().optional(),
+		readIncomingMessages: Joi.boolean().optional(),
+		autoRejectCalls: Joi.boolean().optional(),
+		webhook_url: Joi.string().uri().optional(),
+		webhook_enabled: Joi.boolean().optional(),
+		webhookEvents: Joi.array().items(Joi.string()).optional(),
+	});
 
-  private readonly getSessionsSchema = Joi.object({
-    page: Joi.number().integer().min(1).default(1),
-    limit: Joi.number().integer().min(1).max(100).default(10),
-    search: Joi.string().max(100).optional(),
-    status_id: Joi.number().integer().min(1).optional(),
-    user_id: Joi.number().integer().min(1).optional(),
-    sortBy: Joi.string().valid('id', 'name', 'phone_number', 'created_at', 'updated_at').default('created_at'),
-    sortOrder: Joi.string().valid('ASC', 'DESC').default('DESC')
-  });
+	private readonly getSessionsSchema = Joi.object({
+		page: Joi.number().integer().min(1).default(1),
+		limit: Joi.number().integer().min(1).max(100).default(10),
+		search: Joi.string().max(100).optional(),
+		status_id: Joi.number().integer().min(1).optional(),
+		user_id: Joi.number().integer().min(1).optional(),
+		sortBy: Joi.string()
+			.valid("id", "name", "phone_number", "created_at", "updated_at")
+			.default("created_at"),
+		sortOrder: Joi.string().valid("ASC", "DESC").default("DESC"),
+	});
 
-  private readonly getSessionByIdSchema = Joi.object({
-    id: Joi.number().integer().min(1).required()
-  });
+	private readonly getSessionByIdSchema = Joi.object({
+		id: Joi.number().integer().min(1).required(),
+	});
 
-  private readonly connectSessionSchema = Joi.object({
-    id: Joi.number().integer().min(1).required()
-  });
+	private readonly connectSessionSchema = Joi.object({
+		id: Joi.number().integer().min(1).required(),
+	});
 
-  private readonly disconnectSessionSchema = Joi.object({
-    id: Joi.number().integer().min(1).required()
-  });
+	private readonly disconnectSessionSchema = Joi.object({
+		id: Joi.number().integer().min(1).required(),
+	});
 
-  private readonly selectSessionSchema = Joi.object({
-    id: Joi.number().integer().min(1).required()
-  });
+	private readonly selectSessionSchema = Joi.object({
+		id: Joi.number().integer().min(1).required(),
+	});
 
-  /**
-   * Create a new WhatsApp session
-   * @route POST /api/whatsapp-sessions
-   */
-  public createSession = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const userId = (req as any).user?.id;
-      
-      if (!userId) {
-        res.status(401).json({
-          success: false,
-          message: 'Authentication required',
-          error: 'User not authenticated'
-        });
-        return;
-      }
+	/**
+	 * Create a new WhatsApp session
+	 * @route POST /api/whatsapp-sessions
+	 */
+	public createSession = async (req: Request, res: Response): Promise<void> => {
+		try {
+			const userId = (req as any).user?.id;
+			if (!userId) {
+				res.status(401).json({
+					success: false,
+					message: "Authentication required",
+					error: "User not authenticated",
+				});
+				return;
+			}
 
-      this.logger.info('WhatsApp session creation attempt', { 
-        userId, 
-        phone_number: req.body.phoneNumber 
-      });
+			const sessionData = {
+				name: req.body.name || req.body.nombre,
+				userId,
+				phoneNumber: req.body.phone_number || req.body.phoneNumber,
+				statusId: req.body.status_id || req.body.statusId,
+				accountProtection:
+					typeof req.body.account_protection !== "undefined"
+						? req.body.account_protection
+						: req.body.accountProtection,
+				logMessages:
+					typeof req.body.log_messages !== "undefined"
+						? req.body.log_messages
+						: req.body.logMessages,
+				webhookUrl: req.body.webhook_url || req.body.webhookUrl,
+				webhookEnabled:
+					typeof req.body.webhook_enabled !== "undefined"
+						? req.body.webhook_enabled
+						: req.body.webhookEnabled,
 
-      const sessionData = {
-        ...req.body,
-        userId
-      };
+				webhookEvents: req.body.webhook_events || req.body.webhookEvents,
+				readIncomingMessages:
+					typeof req.body.read_incoming_messages !== "undefined"
+						? req.body.read_incoming_messages
+						: req.body.readIncomingMessages,
+				autoRejectCalls:
+					typeof req.body.auto_reject_calls !== "undefined"
+						? req.body.auto_reject_calls
+						: req.body.autoRejectCalls,
+				browserContextId:
+					req.body.browser_context_id || req.body.browserContextId,
+			};
 
-      const result = await this.sessionService.createSession(sessionData);
+			this.logger.info("WhatsApp session creation attempt", {
+				userId,
+				phone_number: sessionData.phoneNumber,
+			});
 
-      if (result.success) {
-        this.loggingMiddleware.logWhatsAppEvent('session_created', result.data?.id || 0, userId, true, {
-          phone_number: req.body.phoneNumber,
-          name: req.body.name
-        });
-        res.status(201).json(result);
-      } else {
-        this.logger.warn('WhatsApp session creation failed', { 
-          userId, 
-          phone_number: req.body.phoneNumber, 
-          error: (result as any).error 
-        });
-        res.status(400).json(result);
-      }
-    } catch (error) {
-      this.logger.error('WhatsApp session creation error', error);
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: 'Session creation failed'
-      });
-    }
-  };
+			const result = await this.sessionService.createSession(
+				sessionData as any
+			);
 
-  /**
-   * Get list of WhatsApp sessions with pagination and filters
-   * @route GET /api/whatsapp-sessions
-   */
-  public getSessions = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const userId = (req as any).user?.id;
-      const userRole = (req as any).user?.role;
-      
-      const filters = {
-        page: parseInt(req.query.page as string) || 1,
-        limit: parseInt(req.query.limit as string) || 10,
-        search: req.query.search as string,
-        status_id: req.query.status_id ? parseInt(req.query.status_id as string) : undefined,
-        user_id: userRole === 'admin' ? (req.query.user_id ? parseInt(req.query.user_id as string) : undefined) : userId,
-        sortBy: (req.query.sortBy as string) || 'created_at',
-        sortOrder: (req.query.sortOrder as string) || 'DESC'
-      };
+			if (result.success) {
+				try {
+					this.loggingMiddleware.logWhatsAppEvent(
+						"session_created",
+						result.data?.id || 0,
+						userId,
+						true,
+						{
+							phone_number: sessionData.phoneNumber,
+							name: sessionData.name,
+						}
+					);
+				} catch (e) {
+					this.logger.warn(
+						"Logging middleware failed after session creation",
+						e
+					);
+				}
+				res.status(201).json(result);
+			} else {
+				this.logger.warn("WhatsApp session creation failed", {
+					userId,
+					phone_number: sessionData.phoneNumber,
+					error: (result as any).error,
+				});
 
-      this.logger.info('WhatsApp sessions list request', { filters });
+				res.status(400).json(result);
+			}
+		} catch (error) {
+			this.logger.error("WhatsApp session creation error", error);
+			res.status(500).json({
+				success: false,
+				message: "Internal server error",
+				error: "Session creation failed",
+			});
+		}
+	};
 
-      // Get sessions by user (admin can see all, regular users see only their own)
-      const result = await this.sessionService.getSessionsByUser(
-        filters.user_id || userId, 
-        {
-          page: filters.page,
-          limit: filters.limit,
-          sortBy: filters.sortBy,
-          sortOrder: filters.sortOrder as 'ASC' | 'DESC'
-        }
-      );
+	/**
+	 * Get list of WhatsApp sessions with pagination and filters
+	 * @route GET /api/whatsapp-sessions
+	 */
+	public getSessions = async (req: Request, res: Response): Promise<void> => {
+		try {
+			const userId = (req as any).user?.id;
+			const userRole = (req as any).user?.role;
 
-      if (result.success) {
-        res.status(200).json(result);
-      } else {
-        res.status(500).json(result);
-      }
-    } catch (error) {
-      this.logger.error('Get WhatsApp sessions error', error);
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: 'Failed to get sessions'
-      });
-    }
-  };
+			const filters = {
+				page: parseInt(req.query.page as string) || 1,
+				limit: parseInt(req.query.limit as string) || 10,
+				search: req.query.search as string,
+				status_id: req.query.status_id
+					? parseInt(req.query.status_id as string)
+					: undefined,
+				user_id:
+					userRole === "admin"
+						? req.query.user_id
+							? parseInt(req.query.user_id as string)
+							: undefined
+						: userId,
+				sortBy: (req.query.sortBy as string) || "created_at",
+				sortOrder: (req.query.sortOrder as string) || "DESC",
+			};
 
-  /**
-   * Get WhatsApp session by ID
-   * @route GET /api/whatsapp-sessions/:id
-   */
-  public getSessionById = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const sessionId = parseInt((req.params.id as string) || '0');
-      const userId = (req as any).user?.id;
-      const userRole = (req as any).user?.role;
-      
-      this.logger.info('Get WhatsApp session by ID request', { sessionId, userId });
+			this.logger.info("WhatsApp sessions list request", { filters });
 
-      const result = await this.sessionService.getSessionById(sessionId, userId);
+			// Get sessions by user (admin can see all, regular users see only their own)
+			const result = await this.sessionService.getSessionsByUser(
+				filters.user_id || userId,
+				{
+					page: filters.page,
+					limit: filters.limit,
+					sortBy: filters.sortBy,
+					sortOrder: filters.sortOrder as "ASC" | "DESC",
+				}
+			);
 
-      if (result.success) {
-        res.status(200).json(result);
-      } else {
-        res.status(404).json(result);
-      }
-    } catch (error) {
-      this.logger.error('Get WhatsApp session by ID error', error);
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: 'Failed to get session'
-      });
-    }
-  };
+			if (result.success) {
+				res.status(200).json(result);
+			} else {
+				res.status(500).json(result);
+			}
+		} catch (error) {
+			this.logger.error("Get WhatsApp sessions error", error);
+			res.status(500).json({
+				success: false,
+				message: "Internal server error",
+				error: "Failed to get sessions",
+			});
+		}
+	};
 
-  /**
-   * Update WhatsApp session
-   * @route PUT /api/whatsapp-sessions/:id
-   */
-  public updateSession = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const sessionId = parseInt((req.params.id as string) || '0');
-      const userId = (req as any).user?.id;
-      const userRole = (req as any).user?.role;
-      
-      this.logger.info('WhatsApp session update attempt', { sessionId, userId });
+	/**
+	 * Get WhatsApp session by ID
+	 * @route GET /api/whatsapp-sessions/:id
+	 */
+	public getSessionById = async (
+		req: Request,
+		res: Response
+	): Promise<void> => {
+		try {
+			const sessionId = parseInt((req.params.id as string) || "0");
+			const userId = (req as any).user?.id;
+			const userRole = (req as any).user?.role;
 
-      const result = await this.sessionService.updateSession(sessionId, userId, req.body);
+			this.logger.info("Get WhatsApp session by ID request", {
+				sessionId,
+				userId,
+			});
 
-      if (result.success) {
-        this.loggingMiddleware.logWhatsAppEvent('session_updated', sessionId, userId, true, req.body);
-        res.status(200).json(result);
-      } else {
-        this.logger.warn('WhatsApp session update failed', { 
-          sessionId, 
-          userId, 
-          error: (result as any).error 
-        });
-        res.status(400).json(result);
-      }
-    } catch (error) {
-      this.logger.error('WhatsApp session update error', error);
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: 'Session update failed'
-      });
-    }
-  };
+			const result = await this.sessionService.getSessionById(
+				sessionId,
+				userId
+			);
 
-  /**
-   * Delete WhatsApp session
-   * @route DELETE /api/whatsapp-sessions/:id
-   */
-  public deleteSession = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const sessionId = parseInt((req.params.id as string) || '0');
-      const userId = (req as any).user?.id;
-      const userRole = (req as any).user?.role;
-      
-      this.logger.info('WhatsApp session deletion attempt', { sessionId, userId });
+			if (result.success) {
+				res.status(200).json(result);
+			} else {
+				res.status(404).json(result);
+			}
+		} catch (error) {
+			this.logger.error("Get WhatsApp session by ID error", error);
+			res.status(500).json({
+				success: false,
+				message: "Internal server error",
+				error: "Failed to get session",
+			});
+		}
+	};
 
-      const result = await this.sessionService.deleteSession(sessionId, userId);
+	/**
+	 * Update WhatsApp session
+	 * @route PUT /api/whatsapp-sessions/:id
+	 */
+	public updateSession = async (req: Request, res: Response): Promise<void> => {
+		try {
+			const sessionId = parseInt((req.params.id as string) || "0");
+			const userId = (req as any).user?.id;
+			const userRole = (req as any).user?.role;
 
-      if (result.success) {
-        this.loggingMiddleware.logWhatsAppEvent('session_deleted', sessionId, userId, true);
-        res.status(200).json(result);
-      } else {
-        this.logger.warn('WhatsApp session deletion failed', { 
-          sessionId, 
-          userId, 
-          error: (result as any).error 
-        });
-        res.status(400).json(result);
-      }
-    } catch (error) {
-      this.logger.error('WhatsApp session deletion error', error);
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: 'Session deletion failed'
-      });
-    }
-  };
+			this.logger.info("WhatsApp session update attempt", {
+				sessionId,
+				userId,
+			});
 
-  /**
-   * Connect WhatsApp session
-   * @route POST /api/whatsapp-sessions/:id/connect
-   */
-  public connectSession = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const sessionId = parseInt((req.params.id as string) || '0');
-      const userId = (req as any).user?.id;
-      const userRole = (req as any).user?.role;
-      
-      this.logger.info('WhatsApp session connect attempt', { sessionId, userId });
+			const result = await this.sessionService.updateSession(
+				sessionId,
+				userId,
+				req.body
+			);
 
-      const result = await this.sessionService.connectSession(sessionId, userId);
+			if (result.success) {
+				this.loggingMiddleware.logWhatsAppEvent(
+					"session_updated",
+					sessionId,
+					userId,
+					true,
+					req.body
+				);
+				res.status(200).json(result);
+			} else {
+				this.logger.warn("WhatsApp session update failed", {
+					sessionId,
+					userId,
+					error: (result as any).error,
+				});
+				res.status(400).json(result);
+			}
+		} catch (error) {
+			this.logger.error("WhatsApp session update error", error);
+			res.status(500).json({
+				success: false,
+				message: "Internal server error",
+				error: "Session update failed",
+			});
+		}
+	};
 
-      if (result.success) {
-        this.loggingMiddleware.logWhatsAppEvent('session_connected', sessionId, userId, true);
-        res.status(200).json(result);
-      } else {
-        this.logger.warn('WhatsApp session connect failed', { 
-          sessionId, 
-          userId, 
-          error: (result as any).error 
-        });
-        res.status(400).json(result);
-      }
-    } catch (error) {
-      this.logger.error('WhatsApp session connect error', error);
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: 'Session connection failed'
-      });
-    }
-  };
+	/**
+	 * Delete WhatsApp session
+	 * @route DELETE /api/whatsapp-sessions/:id
+	 */
+	public deleteSession = async (req: Request, res: Response): Promise<void> => {
+		try {
+			const sessionId = parseInt((req.params.id as string) || "0");
+			const userId = (req as any).user?.id;
+			const userRole = (req as any).user?.role;
 
-  /**
-   * Disconnect WhatsApp session
-   * @route POST /api/whatsapp-sessions/:id/disconnect
-   */
-  public disconnectSession = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const sessionId = parseInt((req.params.id as string) || '0');
-      const userId = (req as any).user?.id;
-      const userRole = (req as any).user?.role;
-      
-      this.logger.info('WhatsApp session disconnect attempt', { sessionId, userId });
+			this.logger.info("WhatsApp session deletion attempt", {
+				sessionId,
+				userId,
+			});
 
-      const result = await this.sessionService.disconnectSession(sessionId, userId);
+			const result = await this.sessionService.deleteSession(sessionId, userId);
 
-      if (result.success) {
-        this.loggingMiddleware.logWhatsAppEvent('session_disconnected', sessionId, userId, true);
-        res.status(200).json(result);
-      } else {
-        this.logger.warn('WhatsApp session disconnect failed', { 
-          sessionId, 
-          userId, 
-          error: (result as any).error 
-        });
-        res.status(400).json(result);
-      }
-    } catch (error) {
-      this.logger.error('WhatsApp session disconnect error', error);
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: 'Session disconnection failed'
-      });
-    }
-  };
+			if (result.success) {
+				this.loggingMiddleware.logWhatsAppEvent(
+					"session_deleted",
+					sessionId,
+					userId,
+					true
+				);
+				res.status(200).json(result);
+			} else {
+				this.logger.warn("WhatsApp session deletion failed", {
+					sessionId,
+					userId,
+					error: (result as any).error,
+				});
+				res.status(400).json(result);
+			}
+		} catch (error) {
+			this.logger.error("WhatsApp session deletion error", error);
+			res.status(500).json({
+				success: false,
+				message: "Internal server error",
+				error: "Session deletion failed",
+			});
+		}
+	};
 
-  /**
-   * Select WhatsApp session (mark as active)
-   * @route POST /api/whatsapp-sessions/:id/select
-   */
-  public selectSession = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const sessionId = parseInt((req.params.id as string) || '0');
-      const userId = (req as any).user?.id;
-      const userRole = (req as any).user?.role;
-      
-      this.logger.info('WhatsApp session select attempt', { sessionId, userId });
+	/**
+	 * Connect WhatsApp session
+	 * @route POST /api/whatsapp-sessions/:id/connect
+	 */
+	public connectSession = async (
+		req: Request,
+		res: Response
+	): Promise<void> => {
+		try {
+			const sessionId = parseInt((req.params.id as string) || "0");
+			const userId = (req as any).user?.id;
+			const userRole = (req as any).user?.role;
 
-      // TODO: Implement select session functionality
-      const result = { success: true, message: 'Session selected successfully' };
+			this.logger.info("WhatsApp session connect attempt", {
+				sessionId,
+				userId,
+			});
 
-      if (result.success) {
-        this.loggingMiddleware.logWhatsAppEvent('session_selected', sessionId, userId, true);
-        res.status(200).json(result);
-      } else {
-        this.logger.warn('WhatsApp session select failed', { 
-          sessionId, 
-          userId, 
-          error: (result as any).error 
-        });
-        res.status(400).json(result);
-      }
-    } catch (error) {
-      this.logger.error('WhatsApp session select error', error);
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: 'Session selection failed'
-      });
-    }
-  };
+			const result = await this.sessionService.connectSession(
+				sessionId,
+				userId
+			);
 
-  /**
-   * Get session QR code
-   * @route GET /api/whatsapp-sessions/:id/qr
-   */
-  public getSessionQR = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const sessionId = parseInt((req.params.id as string) || '0');
-      const userId = (req as any).user?.id;
-      const userRole = (req as any).user?.role;
-      
-      this.logger.info('Get WhatsApp session QR request', { sessionId, userId });
+			if (result.success) {
+				this.loggingMiddleware.logWhatsAppEvent(
+					"session_connected",
+					sessionId,
+					userId,
+					true
+				);
+				res.status(200).json(result);
+			} else {
+				this.logger.warn("WhatsApp session connect failed", {
+					sessionId,
+					userId,
+					error: (result as any).error,
+				});
+				res.status(400).json(result);
+			}
+		} catch (error) {
+			this.logger.error("WhatsApp session connect error", error);
+			res.status(500).json({
+				success: false,
+				message: "Internal server error",
+				error: "Session connection failed",
+			});
+		}
+	};
 
-      // TODO: Implement get session QR functionality
-      const result = { success: true, data: { qrCode: 'sample-qr-code' } };
+	/**
+	 * Disconnect WhatsApp session
+	 * @route POST /api/whatsapp-sessions/:id/disconnect
+	 */
+	public disconnectSession = async (
+		req: Request,
+		res: Response
+	): Promise<void> => {
+		try {
+			const sessionId = parseInt((req.params.id as string) || "0");
+			const userId = (req as any).user?.id;
+			const userRole = (req as any).user?.role;
 
-      if (result.success) {
-        res.status(200).json(result);
-      } else {
-        res.status(404).json(result);
-      }
-    } catch (error) {
-      this.logger.error('Get WhatsApp session QR error', error);
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: 'Failed to get QR code'
-      });
-    }
-  };
+			this.logger.info("WhatsApp session disconnect attempt", {
+				sessionId,
+				userId,
+			});
 
-  /**
-   * Refresh session QR code
-   * @route POST /api/whatsapp-sessions/:id/qr/refresh
-   */
-  public refreshQR = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const sessionId = parseInt((req.params.id as string) || '0');
-      const userId = (req as any).user?.id;
-      const userRole = (req as any).user?.role;
-      
-      this.logger.info('WhatsApp session QR refresh attempt', { sessionId, userId });
+			const result = await this.sessionService.disconnectSession(
+				sessionId,
+				userId
+			);
 
-      // TODO: Implement refresh QR functionality
-      const result = { success: true, message: 'QR code refreshed successfully' };
+			if (result.success) {
+				this.loggingMiddleware.logWhatsAppEvent(
+					"session_disconnected",
+					sessionId,
+					userId,
+					true
+				);
+				res.status(200).json(result);
+			} else {
+				this.logger.warn("WhatsApp session disconnect failed", {
+					sessionId,
+					userId,
+					error: (result as any).error,
+				});
+				res.status(400).json(result);
+			}
+		} catch (error) {
+			this.logger.error("WhatsApp session disconnect error", error);
+			res.status(500).json({
+				success: false,
+				message: "Internal server error",
+				error: "Session disconnection failed",
+			});
+		}
+	};
 
-      if (result.success) {
-        this.loggingMiddleware.logWhatsAppEvent('qr_refreshed', sessionId, userId, true);
-        res.status(200).json(result);
-      } else {
-        this.logger.warn('WhatsApp session QR refresh failed', { 
-          sessionId, 
-          userId, 
-          error: (result as any).error 
-        });
-        res.status(400).json(result);
-      }
-    } catch (error) {
-      this.logger.error('WhatsApp session QR refresh error', error);
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: 'QR refresh failed'
-      });
-    }
-  };
+	/**
+	 * Select WhatsApp session (mark as active)
+	 * @route POST /api/whatsapp-sessions/:id/select
+	 */
+	public selectSession = async (req: Request, res: Response): Promise<void> => {
+		try {
+			const sessionId = parseInt((req.params.id as string) || "0");
+			const userId = (req as any).user?.id;
+			const userRole = (req as any).user?.role;
 
-  /**
-   * Get session status
-   * @route GET /api/whatsapp-sessions/:id/status
-   */
-  public getSessionStatus = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const sessionId = parseInt((req.params.id as string) || '0');
-      const userId = (req as any).user?.id;
-      const userRole = (req as any).user?.role;
-      
-      this.logger.info('Get WhatsApp session status request', { sessionId, userId });
+			this.logger.info("WhatsApp session select attempt", {
+				sessionId,
+				userId,
+			});
 
-      const result = await this.sessionService.getSessionStatus(sessionId, userId);
+			// TODO: Implement select session functionality
+			const result = {
+				success: true,
+				message: "Session selected successfully",
+			};
 
-      if (result.success) {
-        res.status(200).json(result);
-      } else {
-        res.status(404).json(result);
-      }
-    } catch (error) {
-      this.logger.error('Get WhatsApp session status error', error);
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: 'Failed to get session status'
-      });
-    }
-  };
+			if (result.success) {
+				this.loggingMiddleware.logWhatsAppEvent(
+					"session_selected",
+					sessionId,
+					userId,
+					true
+				);
+				res.status(200).json(result);
+			} else {
+				this.logger.warn("WhatsApp session select failed", {
+					sessionId,
+					userId,
+					error: (result as any).error,
+				});
+				res.status(400).json(result);
+			}
+		} catch (error) {
+			this.logger.error("WhatsApp session select error", error);
+			res.status(500).json({
+				success: false,
+				message: "Internal server error",
+				error: "Session selection failed",
+			});
+		}
+	};
 
-  /**
-   * Get user's sessions
-   * @route GET /api/whatsapp-sessions/user/:userId
-   */
-  public getUserSessions = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const targetUserId = parseInt((req.params.user_id as string) || '0');
-      const currentUserId = (req as any).user?.id;
-      const userRole = (req as any).user?.role;
-      
-      // Only allow if admin or accessing own sessions
-      if (userRole !== 'admin' && currentUserId !== targetUserId) {
-        res.status(403).json({
-          success: false,
-          message: 'Access denied',
-          error: 'You can only access your own sessions'
-        });
-        return;
-      }
+	/**
+	 * Get session QR code
+	 * @route GET /api/whatsapp-sessions/:id/qr
+	 */
+	public getSessionQR = async (req: Request, res: Response): Promise<void> => {
+		try {
+			const sessionId = parseInt((req.params.id as string) || "0");
+			const userId = (req as any).user?.id;
+			const userRole = (req as any).user?.role;
 
-      this.logger.info('Get user WhatsApp sessions request', { targetUserId, currentUserId });
+			this.logger.info("Get WhatsApp session QR request", {
+				sessionId,
+				userId,
+			});
 
-      const result = await this.sessionService.getUserSessions(targetUserId);
+			// TODO: Implement get session QR functionality
+			const result = { success: true, data: { qrCode: "sample-qr-code" } };
 
-      if (result.success) {
-        res.status(200).json(result);
-      } else {
-        res.status(404).json(result);
-      }
-    } catch (error) {
-      this.logger.error('Get user WhatsApp sessions error', error);
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: 'Failed to get user sessions'
-      });
-    }
-  };
+			if (result.success) {
+				res.status(200).json(result);
+			} else {
+				res.status(404).json(result);
+			}
+		} catch (error) {
+			this.logger.error("Get WhatsApp session QR error", error);
+			res.status(500).json({
+				success: false,
+				message: "Internal server error",
+				error: "Failed to get QR code",
+			});
+		}
+	};
 
-  /**
-   * Get session statistics
-   * @route GET /api/whatsapp-sessions/stats
-   */
-  public getSessionStats = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const userId = (req as any).user?.id;
-      const userRole = (req as any).user?.role;
-      
-      this.logger.info('Get WhatsApp session stats request', { userId });
+	/**
+	 * Refresh session QR code
+	 * @route POST /api/whatsapp-sessions/:id/qr/refresh
+	 */
+	public refreshQR = async (req: Request, res: Response): Promise<void> => {
+		try {
+			const sessionId = parseInt((req.params.id as string) || "0");
+			const userId = (req as any).user?.id;
+			const userRole = (req as any).user?.role;
 
-      // TODO: Implement general session stats method
-      const result = { success: true, message: 'Session stats retrieved successfully', data: {} };
+			this.logger.info("WhatsApp session QR refresh attempt", {
+				sessionId,
+				userId,
+			});
 
-      if (result.success) {
-        res.status(200).json(result);
-      } else {
-        res.status(500).json(result);
-      }
-    } catch (error) {
-      this.logger.error('Get WhatsApp session stats error', error);
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: 'Failed to get session statistics'
-      });
-    }
-  };
+			// TODO: Implement refresh QR functionality
+			const result = {
+				success: true,
+				message: "QR code refreshed successfully",
+			};
 
-  /**
-   * Health check for WhatsApp session service
-   * @route GET /api/whatsapp-sessions/health
-   */
-  public healthCheck = async (req: Request, res: Response): Promise<void> => {
-    try {
-      res.status(200).json({
-        success: true,
-        message: 'WhatsApp session service is healthy',
-        timestamp: new Date().toISOString(),
-        service: 'whatsapp-sessions'
-      });
-    } catch (error) {
-      this.logger.error('WhatsApp session health check error', error);
-      res.status(500).json({
-        success: false,
-        message: 'WhatsApp session service is unhealthy',
-        error: 'Health check failed'
-      });
-    }
-  };
+			if (result.success) {
+				this.loggingMiddleware.logWhatsAppEvent(
+					"qr_refreshed",
+					sessionId,
+					userId,
+					true
+				);
+				res.status(200).json(result);
+			} else {
+				this.logger.warn("WhatsApp session QR refresh failed", {
+					sessionId,
+					userId,
+					error: (result as any).error,
+				});
+				res.status(400).json(result);
+			}
+		} catch (error) {
+			this.logger.error("WhatsApp session QR refresh error", error);
+			res.status(500).json({
+				success: false,
+				message: "Internal server error",
+				error: "QR refresh failed",
+			});
+		}
+	};
 
-  /**
-   * Get validation middleware for each endpoint
-   */
-  public getValidationMiddleware() {
-    return {
-      createSession: this.validationMiddleware.validateBody(this.createSessionSchema),
-      updateSession: this.validationMiddleware.validateBody(this.updateSessionSchema),
-      getSessions: this.validationMiddleware.validateQuery(this.getSessionsSchema),
-      getSessionById: this.validationMiddleware.validateParams(this.getSessionByIdSchema),
-      connectSession: this.validationMiddleware.validateParams(this.connectSessionSchema),
-      disconnectSession: this.validationMiddleware.validateParams(this.disconnectSessionSchema),
-      selectSession: this.validationMiddleware.validateParams(this.selectSessionSchema)
-    };
-  }
+	/**
+	 * Get session status
+	 * @route GET /api/whatsapp-sessions/:id/status
+	 */
+	public getSessionStatus = async (
+		req: Request,
+		res: Response
+	): Promise<void> => {
+		try {
+			const sessionId = parseInt((req.params.id as string) || "0");
+			const userId = (req as any).user?.id;
+			const userRole = (req as any).user?.role;
 
-  /**
-   * Get rate limiting middleware for each endpoint
-   */
-  public getRateLimitMiddleware() {
-    return {
-      createSession: this.rateLimitMiddleware.adminRateLimit(5, 900000), // 5 per 15 minutes
-      getSessions: this.rateLimitMiddleware.adminRateLimit(100, 900000), // 100 per 15 minutes
-      getSessionById: this.rateLimitMiddleware.adminRateLimit(200, 900000), // 200 per 15 minutes
-      updateSession: this.rateLimitMiddleware.adminRateLimit(20, 900000), // 20 per 15 minutes
-      deleteSession: this.rateLimitMiddleware.adminRateLimit(5, 900000), // 5 per 15 minutes
-      connectSession: this.rateLimitMiddleware.adminRateLimit(10, 900000), // 10 per 15 minutes
-      disconnectSession: this.rateLimitMiddleware.adminRateLimit(10, 900000), // 10 per 15 minutes
-      selectSession: this.rateLimitMiddleware.adminRateLimit(20, 900000), // 20 per 15 minutes
-      getSessionQR: this.rateLimitMiddleware.adminRateLimit(50, 900000), // 50 per 15 minutes
-      refreshQR: this.rateLimitMiddleware.adminRateLimit(10, 900000), // 10 per 15 minutes
-      getSessionStatus: this.rateLimitMiddleware.adminRateLimit(100, 900000), // 100 per 15 minutes
-      getUserSessions: this.rateLimitMiddleware.adminRateLimit(100, 900000), // 100 per 15 minutes
-      getSessionStats: this.rateLimitMiddleware.adminRateLimit(50, 900000) // 50 per 15 minutes
-    };
-  }
+			this.logger.info("Get WhatsApp session status request", {
+				sessionId,
+				userId,
+			});
+
+			const result = await this.sessionService.getSessionStatus(
+				sessionId,
+				userId
+			);
+
+			if (result.success) {
+				res.status(200).json(result);
+			} else {
+				res.status(404).json(result);
+			}
+		} catch (error) {
+			this.logger.error("Get WhatsApp session status error", error);
+			res.status(500).json({
+				success: false,
+				message: "Internal server error",
+				error: "Failed to get session status",
+			});
+		}
+	};
+
+	/**
+	 * Get user's sessions
+	 * @route GET /api/whatsapp-sessions/user/:userId
+	 */
+	public getUserSessions = async (
+		req: Request,
+		res: Response
+	): Promise<void> => {
+		try {
+			const targetUserId = parseInt((req.params.user_id as string) || "0");
+			const currentUserId = (req as any).user?.id;
+			const userRole = (req as any).user?.role;
+
+			// Only allow if admin or accessing own sessions
+			if (userRole !== "admin" && currentUserId !== targetUserId) {
+				res.status(403).json({
+					success: false,
+					message: "Access denied",
+					error: "You can only access your own sessions",
+				});
+				return;
+			}
+
+			this.logger.info("Get user WhatsApp sessions request", {
+				targetUserId,
+				currentUserId,
+			});
+
+			const result = await this.sessionService.getUserSessions(targetUserId);
+
+			if (result.success) {
+				res.status(200).json(result);
+			} else {
+				res.status(404).json(result);
+			}
+		} catch (error) {
+			this.logger.error("Get user WhatsApp sessions error", error);
+			res.status(500).json({
+				success: false,
+				message: "Internal server error",
+				error: "Failed to get user sessions",
+			});
+		}
+	};
+
+	/**
+	 * Get session statistics
+	 * @route GET /api/whatsapp-sessions/stats
+	 */
+	public getSessionStats = async (
+		req: Request,
+		res: Response
+	): Promise<void> => {
+		try {
+			const userId = (req as any).user?.id;
+			const userRole = (req as any).user?.role;
+
+			this.logger.info("Get WhatsApp session stats request", { userId });
+
+			// TODO: Implement general session stats method
+			const result = {
+				success: true,
+				message: "Session stats retrieved successfully",
+				data: {},
+			};
+
+			if (result.success) {
+				res.status(200).json(result);
+			} else {
+				res.status(500).json(result);
+			}
+		} catch (error) {
+			this.logger.error("Get WhatsApp session stats error", error);
+			res.status(500).json({
+				success: false,
+				message: "Internal server error",
+				error: "Failed to get session statistics",
+			});
+		}
+	};
+
+	/**
+	 * Health check for WhatsApp session service
+	 * @route GET /api/whatsapp-sessions/health
+	 */
+	public healthCheck = async (req: Request, res: Response): Promise<void> => {
+		try {
+			res.status(200).json({
+				success: true,
+				message: "WhatsApp session service is healthy",
+				timestamp: new Date().toISOString(),
+				service: "whatsapp-sessions",
+			});
+		} catch (error) {
+			this.logger.error("WhatsApp session health check error", error);
+			res.status(500).json({
+				success: false,
+				message: "WhatsApp session service is unhealthy",
+				error: "Health check failed",
+			});
+		}
+	};
+
+	/**
+	 * Get validation middleware for each endpoint
+	 */
+	public getValidationMiddleware() {
+		return {
+			createSession: this.validationMiddleware.validateBody(
+				this.createSessionSchema
+			),
+			updateSession: this.validationMiddleware.validateBody(
+				this.updateSessionSchema
+			),
+			getSessions: this.validationMiddleware.validateQuery(
+				this.getSessionsSchema
+			),
+			getSessionById: this.validationMiddleware.validateParams(
+				this.getSessionByIdSchema
+			),
+			connectSession: this.validationMiddleware.validateParams(
+				this.connectSessionSchema
+			),
+			disconnectSession: this.validationMiddleware.validateParams(
+				this.disconnectSessionSchema
+			),
+			selectSession: this.validationMiddleware.validateParams(
+				this.selectSessionSchema
+			),
+		};
+	}
+
+	/**
+	 * Get rate limiting middleware for each endpoint
+	 */
+	public getRateLimitMiddleware() {
+		return {
+			createSession: this.rateLimitMiddleware.adminRateLimit(5, 900000), // 5 per 15 minutes
+			getSessions: this.rateLimitMiddleware.adminRateLimit(100, 900000), // 100 per 15 minutes
+			getSessionById: this.rateLimitMiddleware.adminRateLimit(200, 900000), // 200 per 15 minutes
+			updateSession: this.rateLimitMiddleware.adminRateLimit(20, 900000), // 20 per 15 minutes
+			deleteSession: this.rateLimitMiddleware.adminRateLimit(5, 900000), // 5 per 15 minutes
+			connectSession: this.rateLimitMiddleware.adminRateLimit(10, 900000), // 10 per 15 minutes
+			disconnectSession: this.rateLimitMiddleware.adminRateLimit(10, 900000), // 10 per 15 minutes
+			selectSession: this.rateLimitMiddleware.adminRateLimit(20, 900000), // 20 per 15 minutes
+			getSessionQR: this.rateLimitMiddleware.adminRateLimit(50, 900000), // 50 per 15 minutes
+			refreshQR: this.rateLimitMiddleware.adminRateLimit(10, 900000), // 10 per 15 minutes
+			getSessionStatus: this.rateLimitMiddleware.adminRateLimit(100, 900000), // 100 per 15 minutes
+			getUserSessions: this.rateLimitMiddleware.adminRateLimit(100, 900000), // 100 per 15 minutes
+			getSessionStats: this.rateLimitMiddleware.adminRateLimit(50, 900000), // 50 per 15 minutes
+		};
+	}
 }
 
 export default WhatsAppSessionController;
