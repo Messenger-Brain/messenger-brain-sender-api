@@ -5,7 +5,7 @@ import BrowserContext from "../models/BrowserContext";
 import Message from "../models/Message";
 import { ConfigService } from "../config/ConfigService";
 import Logger from "../utils/logger";
-import { Op } from "sequelize";
+import { Op, UniqueConstraintError } from "sequelize";
 import {
 	CreateWhatsAppSessionRequest,
 	UpdateWhatsAppSessionRequest,
@@ -152,7 +152,7 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
 			const webhookSecret = "WEBHOOK SECRET PLACEHOLDER";
 
 			const statusId =
-				sessionData.statusId ?? (await this.getStatusIdBySlug("connected"));
+				sessionData.statusId ?? (await this.getStatusIdBySlug("need_scan"));
 
 			// Create session
 			const createData: any = {
@@ -192,7 +192,26 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
 				data: sessionWithRelations.data!,
 			};
 		} catch (error) {
+			if (error instanceof UniqueConstraintError) {
+				// Determinar campo en conflicto si está disponible
+				const fields =
+					(error as any).errors?.map((e: any) => e.path).join(", ") ||
+					"unique_field";
+				this.logger.warn(
+					"Unique constraint violation creating WhatsApp session",
+					{ fields, error }
+				);
+				return {
+					success: false,
+					message: fields.includes("api_key")
+						? "Collision generating api_key, retry operation"
+						: "Session with this phone number already exists",
+					error: "Unique constraint violation",
+				};
+			}
+
 			this.logger.error("Failed to create WhatsApp session", error);
+
 			return {
 				success: false,
 				message: "Failed to create WhatsApp session",
