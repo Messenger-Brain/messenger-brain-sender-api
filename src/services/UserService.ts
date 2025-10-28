@@ -18,9 +18,9 @@ import {
 
 export interface UserServiceInterface {
   createUser(userData: CreateUserRequest): Promise<ApiResponse<FormattedUserResponse>>;
-  getUserById(user_id: number): Promise<ApiResponse<User>>;
+  getUserById(user_id: number): Promise<ApiResponse<FormattedUserResponse>>;
   getAllUsers(pagination?: PaginationQuery, filters?: FilterQuery): Promise<ApiResponse<{ users: any[]; pagination: { currentPage: number; totalPages: number; totalItems: number; itemsPerPage: number } }>>;
-  updateUser(user_id: number, userData: UpdateUserRequest): Promise<ApiResponse<User>>;
+  updateUser(user_id: number, userData: UpdateUserRequest): Promise<ApiResponse<FormattedUserResponse>>;
   deleteUser(user_id: number): Promise<ApiResponse<void>>;
   getUserRoles(user_id: number): Promise<ApiResponse<Role[]>>;
   assignRole(user_id: number, role_id: number): Promise<ApiResponse<void>>;
@@ -30,7 +30,7 @@ export interface UserServiceInterface {
   searchUsers(searchTerm: string, pagination?: PaginationQuery): Promise<PaginatedResponse<User>>;
   getUsersByRole(roleSlug: string, pagination?: PaginationQuery): Promise<PaginatedResponse<User>>;
   getUsersByStatus(statusSlug: string, pagination?: PaginationQuery): Promise<PaginatedResponse<User>>;
-  toggleUserStatus(user_id: number): Promise<ApiResponse<User>>;
+  toggleUserStatus(user_id: number): Promise<ApiResponse<FormattedUserResponse>>;
   getUserStats(): Promise<ApiResponse<any>>;
 }
 
@@ -168,16 +168,20 @@ export class UserService implements UserServiceInterface {
   /**
    * Get user by ID with relations
    */
-  public async getUserById(user_id: number): Promise<ApiResponse<User>> {
+  public async getUserById(user_id: number): Promise<ApiResponse<FormattedUserResponse>> {
     try {
       const user = await User.findByPk(user_id, {
         include: [
+          // Include roles via the many-to-many association (User -> Roles through UserRole)
           {
-            model: UserRole,
-            include: [{ model: Role }]
+            model: Role,
+            as: 'Roles',
+            through: { attributes: [] }
           },
+          // Include user status using the alias defined in associations
           {
-            model: UserStatus
+            model: UserStatus,
+            as: 'UserStatus'
           }
         ]
       });
@@ -189,10 +193,41 @@ export class UserService implements UserServiceInterface {
         };
       }
 
+      // Derive role slug from included relations (supports multiple include shapes)
+      let roleSlug = 'user';
+      try {
+        const anyUser: any = user;
+        if (anyUser.UserRoles && anyUser.UserRoles[0] && anyUser.UserRoles[0].Role && anyUser.UserRoles[0].Role.slug) {
+          roleSlug = anyUser.UserRoles[0].Role.slug;
+        } else if (anyUser.Roles && anyUser.Roles[0] && anyUser.Roles[0].slug) {
+          roleSlug = anyUser.Roles[0].slug;
+        }
+      } catch (err) {
+        this.logger.warn('Failed to determine role slug for getUserById response', err);
+      }
+
+      // Derive status slug from included UserStatus
+      const anyUser: any = user;
+      const statusSlug = anyUser.UserStatus && anyUser.UserStatus.slug ? anyUser.UserStatus.slug : 'active';
+
+      // Normalize phone
+      const phone = anyUser.phone_number ? (typeof anyUser.phone_number === 'number' ? `+${anyUser.phone_number}` : anyUser.phone_number) : null;
+
+      const responseData: FormattedUserResponse = {
+        id: anyUser.id,
+        name: anyUser.name,
+        email: anyUser.email,
+        phone: phone,
+        role: roleSlug,
+        status: statusSlug,
+        emailVerified: typeof anyUser.email_verified === 'boolean' ? anyUser.email_verified : false,
+        createdAt: anyUser.createdAt
+      };
+
       return {
         success: true,
         message: 'User retrieved successfully',
-        data: user
+        data: responseData
       };
 
     } catch (error) {
@@ -356,7 +391,7 @@ export class UserService implements UserServiceInterface {
   /**
    * Update user
    */
-  public async updateUser(user_id: number, userData: UpdateUserRequest): Promise<ApiResponse<User>> {
+  public async updateUser(user_id: number, userData: UpdateUserRequest): Promise<ApiResponse<FormattedUserResponse>> {
     try {
       this.logger.info('Updating user', { user_id });
 
@@ -817,7 +852,7 @@ export class UserService implements UserServiceInterface {
   /**
    * Toggle user status (active/inactive)
    */
-  public async toggleUserStatus(user_id: number): Promise<ApiResponse<User>> {
+  public async toggleUserStatus(user_id: number): Promise<ApiResponse<FormattedUserResponse>> {
     try {
       const user = await User.findByPk(user_id);
       if (!user) {
