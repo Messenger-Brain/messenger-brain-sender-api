@@ -185,16 +185,6 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
 
 			const session = await WhatsAppSession.findOne({
 				where: whereClause,
-				include: [
-					{
-						model: User,
-						as: "User",
-					},
-					{
-						model: WhatsAppSessionStatus,
-						as: "WhatsAppSessionStatus",
-					},
-				],
 			});
 
 			if (!session) {
