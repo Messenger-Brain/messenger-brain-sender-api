@@ -27,6 +27,17 @@ export type AuthenticatedRequest = Request & {
 };
 
 // Common API Response types
+export interface FormattedUserResponse {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  role: string;
+  status: string;
+  emailVerified: boolean;
+  createdAt: Date;
+}
+
 export interface ApiResponse<T = any> {
   success: boolean;
   message: string;
@@ -72,18 +83,23 @@ export interface CreateUserRequest {
   name: string;
   email: string;
   password: string;
+  phone_number: string;
+  role:string;
   roleId: number;
   statusId: number;
   freeTrial?: boolean;
+  email_verified: boolean;
 }
 
 export interface UpdateUserRequest {
   name?: string;
   email?: string;
   password?: string;
+  phone_number?: string;
   roleId?: number;
   statusId?: number;
   freeTrial?: boolean;
+  email_verified?: boolean;
 }
 
 export interface LoginRequest {
@@ -99,9 +115,11 @@ export interface AuthResponse {
       id: number;
       name: string;
       email: string;
+      phone_number: string;
       role: string;
       status: string;
       free_trial: boolean;
+      email_verified: boolean;
     };
     token: string;
     refreshToken?: string;

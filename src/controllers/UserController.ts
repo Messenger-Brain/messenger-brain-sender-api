@@ -36,16 +36,20 @@ export class UserController {
     name: Joi.string().min(2).max(200).required(),
     email: Joi.string().email().max(100).required(),
     password: Joi.string().min(8).max(200).required(),
+    phone_number: Joi.string().min(8).max(15).optional(),
     role_id: Joi.number().integer().min(1).optional(),
     status_id: Joi.number().integer().min(1).optional(),
-    free_trial: Joi.boolean().optional()
+    free_trial: Joi.boolean().optional(),
+    email_verified: Joi.boolean().optional()
   });
 
   private readonly updateUserSchema = Joi.object({
     name: Joi.string().min(2).max(200).optional(),
     email: Joi.string().email().max(100).optional(),
+    phone_number: Joi.string().min(8).max(15).optional(),
     status_id: Joi.number().integer().min(1).optional(),
-    free_trial: Joi.boolean().optional()
+    free_trial: Joi.boolean().optional(),
+    email_verified: Joi.boolean().optional()
   });
 
   private readonly getUserListSchema = Joi.object({
@@ -120,16 +124,19 @@ export class UserController {
         sortOrder: ((req.query.sortOrder as string) || 'DESC') as 'ASC' | 'DESC'
       };
 
+      // Accept both slug-based and id-based filters. Prefer slugs when provided.
       const filters = {
         search: req.query.search as string,
+        role: req.query.role as string || undefined,
         role_id: req.query.role_id ? parseInt(req.query.role_id as string) : undefined,
+        status: req.query.status as string || undefined,
         status_id: req.query.status_id ? parseInt(req.query.status_id as string) : undefined,
         free_trial: req.query.free_trial ? req.query.free_trial === 'true' : undefined
       };
 
       this.logger.info('User list request', { pagination, filters });
 
-      const result = await this.userService.getAllUsers(pagination, filters);
+  const result = await this.userService.getAllUsers(pagination, filters as any);
 
       if (result.success) {
         res.status(200).json(result);
@@ -205,6 +212,154 @@ export class UserController {
         success: false,
         message: 'Internal server error',
         error: 'User update failed'
+      });
+    }
+  };
+
+  /**
+   * Update authenticated user's profile
+   * @route PUT /api/users/profile
+   */
+  public updateProfile = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const authUser = (req as any).user;
+      const userId = authUser?.id;
+
+      if (!userId) {
+        res.status(401).json({ success: false, message: 'Unauthorized' });
+        return;
+      }
+
+      this.logger.info('Profile update attempt', { userId });
+
+      const { email, password, ...body } = req.body as any;
+
+      const result = await this.userService.updateProfile(userId, body);
+
+      if (result.success) {
+        this.loggingMiddleware.logBusinessEvent('profile_updated', {
+          userId,
+          updatedBy: userId,
+          changes: body
+        });
+        res.status(200).json(result);
+      } else {
+        this.logger.warn('Profile update failed', { userId, error: result.error });
+        res.status(400).json(result);
+      }
+    } catch (error) {
+      this.logger.error('Profile update error', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: 'Profile update failed'
+      });
+    }
+  };
+
+  /**
+   * Request to delete authenticated user own profile
+   * @route POST /api/users/profile/delete-request
+   */
+  public requestDeleteProfile = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const authUser = (req as any).user;
+      const userId = authUser?.id;
+
+      if (!userId) {
+        res.status(401).json({ success: false, message: 'Unauthorized' });
+        return;
+      }
+
+      this.logger.info('Profile deletion request', { userId });
+
+      const result = await this.userService.requestDeleteProfile(userId);
+
+      if (result.success) {
+        this.loggingMiddleware.logBusinessEvent('profile_deletion_requested', {
+          user_id: userId
+        });
+        res.status(200).json({
+          success: true,
+          message: result.message
+        });
+      } else {
+        this.logger.warn('Profile deletion request failed', { userId, error: result.error });
+        if (result.message && typeof result.message === 'string' && result.message.toLowerCase().includes('administrador')) {
+          res.status(403).json(result);
+        } else {
+          res.status(400).json(result);
+        }
+      }
+    } catch (error) {
+      this.logger.error('Profile deletion request error', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: 'Profile deletion request failed'
+      });
+    }
+  };
+
+  /**
+   * Confirm and execute profile deletion with token, password and confirmation
+   * @route DELETE /api/users/profile/confirm
+   */
+  public confirmDeleteProfile = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const authUser = (req as any).user;
+      const userId = authUser?.id;
+      const { token, password, confirmation } = req.body;
+
+      if (!userId) {
+        res.status(401).json({ success: false, message: 'Unauthorized' });
+        return;
+      }
+
+      if (!token) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Token is required' 
+        });
+        return;
+      }
+
+      if (!password) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Password is required' 
+        });
+        return;
+      }
+
+      if (!confirmation) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Confirmation is required' 
+        });
+        return;
+      }
+
+      this.logger.info('Profile deletion confirmation attempt', { userId });
+
+      const result = await this.userService.confirmDeleteProfile(userId, token, password, confirmation);
+
+      if (result.success) {
+        this.loggingMiddleware.logBusinessEvent('profile_deleted', {
+          user_id: userId,
+          deletedBy: userId
+        });
+        res.status(200).json(result);
+      } else {
+        this.logger.warn('Profile deletion confirmation failed', { userId, error: result.error });
+        res.status(400).json(result);
+      }
+    } catch (error) {
+      this.logger.error('Profile deletion confirmation error', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: 'Profile deletion confirmation failed'
       });
     }
   };
