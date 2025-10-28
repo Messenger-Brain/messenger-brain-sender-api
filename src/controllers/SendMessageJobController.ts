@@ -30,9 +30,9 @@ export class SendMessageJobController {
       const limit = parseInt((req.query.limit as string) || '10');
       const statusId = req.query.status_id ? parseInt(req.query.status_id as string) : undefined;
       const userId = req.query.user_id ? parseInt(req.query.user_id as string) : undefined;
-      
+
       const result = await this.jobService.getJobs(page, limit, statusId, userId);
-      
+
       if (result.success) {
         res.status(200).json(result);
       } else {
@@ -57,9 +57,14 @@ export class SendMessageJobController {
         ...req.body,
         user_id: req.user!.id
       };
-      
+
       const result = await this.jobService.createJob(jobData);
-      
+      //Extraemos el token y traemos los datos de la sesion en base al token
+
+      //Traer el browserContext
+      //realizar el envio del mensaje con puppeteer
+      //se hace el envio del mensaje
+      //Registrar el estatus de envio en la base de datos
       if (result.success) {
         res.status(201).json(result);
       } else {
@@ -82,7 +87,7 @@ export class SendMessageJobController {
     try {
       const jobId = parseInt((req.params.id as string) || '0');
       const result = await this.jobService.getJobById(jobId);
-      
+
       if (result.success) {
         res.status(200).json(result);
       } else {
@@ -105,7 +110,7 @@ export class SendMessageJobController {
     try {
       const jobId = parseInt((req.params.id as string) || '0');
       const result = await this.jobService.startJob(jobId);
-      
+
       if (result.success) {
         res.status(200).json(result);
       } else {
@@ -128,7 +133,7 @@ export class SendMessageJobController {
     try {
       const jobId = parseInt((req.params.id as string) || '0');
       const result = await this.jobService.pauseJob(jobId);
-      
+
       if (result.success) {
         res.status(200).json(result);
       } else {
@@ -151,7 +156,7 @@ export class SendMessageJobController {
     try {
       const jobId = parseInt((req.params.id as string) || '0');
       const result = await this.jobService.resumeJob(jobId);
-      
+
       if (result.success) {
         res.status(200).json(result);
       } else {
@@ -174,7 +179,7 @@ export class SendMessageJobController {
     try {
       const jobId = parseInt((req.params.id as string) || '0');
       const result = await this.jobService.cancelJob(jobId);
-      
+
       if (result.success) {
         res.status(200).json(result);
       } else {
@@ -197,7 +202,7 @@ export class SendMessageJobController {
     try {
       const jobId = parseInt((req.params.id as string) || '0');
       const result = await this.jobService.deleteJob(jobId);
-      
+
       if (result.success) {
         res.status(200).json(result);
       } else {
@@ -219,7 +224,7 @@ export class SendMessageJobController {
   public getJobStats = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const result = await this.jobService.getJobStats();
-      
+
       if (result.success) {
         res.status(200).json(result);
       } else {

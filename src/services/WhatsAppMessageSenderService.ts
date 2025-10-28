@@ -24,6 +24,7 @@ export class WhatsAppMessageSenderService {
     this.puppeteerService = PuppeteerWhatsappMessageService.getInstance();
     this.logger = Logger;
     this.setupWorkers();
+    //Creamos en contexto de prueba
   }
 
   public static getInstance(): WhatsAppMessageSenderService {

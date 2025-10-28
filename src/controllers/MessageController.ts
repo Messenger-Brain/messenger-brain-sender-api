@@ -27,7 +27,7 @@ export class MessageController {
   public createMessage = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const userId = req.user?.id;
-      
+
       if (!userId) {
         res.status(401).json({
           success: false,
@@ -36,6 +36,7 @@ export class MessageController {
         });
         return;
       }
+
 
       // Map from API format to internal format
       const messageData = {
@@ -49,7 +50,7 @@ export class MessageController {
       };
 
       const result = await this.messageService.createMessage(messageData);
-      
+
       if (result.success) {
         res.status(201).json(result);
       } else {
@@ -71,7 +72,7 @@ export class MessageController {
   public sendBulkMessages = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const result = await this.messageService.sendBulkMessages(req.body);
-      
+
       if (result.success) {
         res.status(201).json(result);
       } else {
@@ -93,8 +94,8 @@ export class MessageController {
   public getMessageById = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const messageId = parseInt((req.params.id as string) || '0');
-        const result = await this.messageService.getMessageById(messageId, req.user!.id);
-      
+      const result = await this.messageService.getMessageById(messageId, req.user!.id);
+
       if (result.success) {
         res.status(200).json(result);
       } else {
@@ -118,9 +119,9 @@ export class MessageController {
       const sessionId = parseInt((req.params.sessionId as string) || '0');
       const page = parseInt((req.query.page as string) || '1');
       const limit = parseInt((req.query.limit as string) || '10');
-      
-        const result = await this.messageService.getMessagesBySession(sessionId, req.user!.id, { page, limit });
-      
+
+      const result = await this.messageService.getMessagesBySession(sessionId, req.user!.id, { page, limit });
+
       if (result.success) {
         res.status(200).json(result);
       } else {
@@ -141,8 +142,8 @@ export class MessageController {
    */
   public getMessageStats = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-        const result = await this.messageService.getMessageStats(req.user!.id);
-      
+      const result = await this.messageService.getMessageStats(req.user!.id);
+
       if (result.success) {
         res.status(200).json(result);
       } else {
