@@ -15,6 +15,8 @@ interface WhatsAppSessionAttributes {
   webhook_events?: string[];
   read_incoming_messages: boolean;
   auto_reject_calls: boolean;
+  api_key: string;
+  webhook_secret: string;
   browser_context_id?: number;
   created_at?: Date;
   updated_at?: Date;
@@ -37,6 +39,8 @@ class WhatsAppSession extends Model<WhatsAppSessionAttributes, WhatsAppSessionCr
   public webhook_events?: string[];
   public read_incoming_messages!: boolean;
   public auto_reject_calls!: boolean;
+  public api_key!: string;
+  public webhook_secret!: string;
   public browser_context_id?: number;
   public readonly created_at!: Date;
   public readonly updated_at!: Date;
@@ -133,6 +137,17 @@ WhatsAppSession.init(
       allowNull: false,
       defaultValue: false,
       comment: 'Automatically reject incoming calls',
+    },
+    api_key: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+      unique: true,
+      comment: 'API key for this WhatsApp session - auto-generated on creation',
+    },
+    webhook_secret: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+      comment: 'Secret for webhook validation - auto-generated on creation',
     },
     browser_context_id: {
       type: DataTypes.INTEGER,

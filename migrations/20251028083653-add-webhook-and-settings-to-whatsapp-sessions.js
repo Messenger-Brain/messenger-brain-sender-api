@@ -26,19 +26,19 @@ module.exports = {
       comment: 'Automatically reject incoming calls'
     });
 
-    // Add api_key as STRING column
+    // Add api_key as STRING column (NOT NULL, auto-generated on session creation)
     await queryInterface.addColumn('whatsapp_sessions', 'api_key', {
       type: Sequelize.STRING(255),
-      allowNull: true,
+      allowNull: false,
       unique: true,
-      comment: 'API key for this WhatsApp session'
+      comment: 'API key for this WhatsApp session - auto-generated on creation'
     });
 
-    // Add webhook_secret as STRING column
+    // Add webhook_secret as STRING column (NOT NULL, auto-generated on session creation)
     await queryInterface.addColumn('whatsapp_sessions', 'webhook_secret', {
       type: Sequelize.STRING(255),
-      allowNull: true,
-      comment: 'Secret for webhook validation'
+      allowNull: false,
+      comment: 'Secret for webhook validation - auto-generated on creation'
     });
   },
 
