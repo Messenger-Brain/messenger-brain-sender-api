@@ -14,14 +14,15 @@ import {
   ApiResponse,
   PaginatedResponse,
   FormattedUserResponse,
-  UpdateUserRequestNew
+  UpdateUserRequestNew,
+  FormattedUserResponseUpdated
 } from '../types';
 
 export interface UserServiceInterface {
   createUser(userData: CreateUserRequest): Promise<ApiResponse<FormattedUserResponse>>;
   getUserById(user_id: number): Promise<ApiResponse<FormattedUserResponse>>;
   getAllUsers(pagination?: PaginationQuery, filters?: FilterQuery): Promise<ApiResponse<{ users: any[]; pagination: { currentPage: number; totalPages: number; totalItems: number; itemsPerPage: number } }>>;
-  updateUser(user_id: number, userData: UpdateUserRequestNew): Promise<ApiResponse<FormattedUserResponse>>;
+  updateUser(user_id: number, userData: UpdateUserRequestNew): Promise<ApiResponse<FormattedUserResponseUpdated>>;
   deleteUser(user_id: number): Promise<ApiResponse<void>>;
   getUserRoles(user_id: number): Promise<ApiResponse<Role[]>>;
   assignRole(user_id: number, role_id: number): Promise<ApiResponse<void>>;
@@ -392,7 +393,7 @@ export class UserService implements UserServiceInterface {
   /**
    * Update user
    */
-  public async updateUser(user_id: number, userData: UpdateUserRequestNew): Promise<ApiResponse<FormattedUserResponse>> {
+  public async updateUser(user_id: number, userData: UpdateUserRequestNew): Promise<ApiResponse<FormattedUserResponseUpdated>> {
     try {
       this.logger.info('Updating user', { user_id });
 
@@ -458,13 +459,59 @@ export class UserService implements UserServiceInterface {
       // Log activity
       await this.logUserActivity(user_id, 'user_updated', `User ${user.name} was updated`);
 
-      // Return fresh formatted user data
-      const updatedUser = await this.getUserById(user_id);
-      
+      // Fetch fresh user data with relations
+      const updatedUser = await User.findByPk(user_id, {
+        include: [
+          {
+            model: Role,
+            as: 'Roles',
+            through: { attributes: [] }
+          },
+          {
+            model: UserStatus,
+            as: 'UserStatus'
+          }
+        ]
+      });
+
+      if (!updatedUser) {
+        return {
+          success: false,
+          message: 'User not found after update'
+        };
+      }
+
+      // Derive role slug
+      let roleSlug = 'user';
+      try {
+        const anyUser: any = updatedUser;
+        if (anyUser.Roles && anyUser.Roles[0] && anyUser.Roles[0].slug) {
+          roleSlug = anyUser.Roles[0].slug;
+        }
+      } catch (err) {
+        this.logger.warn('Failed to determine role slug for update response', err);
+      }
+
+      // Derive status slug
+      const anyUser: any = updatedUser;
+      const statusSlug = anyUser.UserStatus && anyUser.UserStatus.slug ? anyUser.UserStatus.slug : 'active';
+
+      // Normalize phone
+      const phone = anyUser.phone_number ? (typeof anyUser.phone_number === 'number' ? `+${anyUser.phone_number}` : anyUser.phone_number) : null;
+
+      const responseData: FormattedUserResponseUpdated = {
+        id: anyUser.id,
+        name: anyUser.name,
+        email: anyUser.email,
+        phone: phone,
+        role: roleSlug,
+        status: statusSlug,
+        updatedAt: anyUser.updatedAt
+      };
+
       return {
         success: true,
-        message: 'User updated successfully',
-        data: updatedUser.data!
+        data: responseData
       };
 
     } catch (error) {
