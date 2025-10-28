@@ -117,6 +117,21 @@ export const updateSubscriptionSchema = Joi.object({
 	notes: Joi.string().max(1000).optional(),
 });
 
+// Admin subscription schemas
+export const createSubscriptionPlanSchema = Joi.object({
+  slug: Joi.string().min(2).max(100).pattern(/^[a-z0-9_-]+$/i).required(),
+  description: Joi.string().min(5).max(500).required(),
+  statusId: Joi.number().integer().positive().required(),
+  price: Joi.number().precision(2).min(0).required()
+});
+
+export const updateSubscriptionPlanSchema = Joi.object({
+  slug: Joi.string().min(2).max(100).pattern(/^[a-z0-9_-]+$/i).optional(),
+  description: Joi.string().min(5).max(500).optional(),
+  statusId: Joi.number().integer().positive().optional(),
+  price: Joi.number().precision(2).min(0).optional()
+});
+
 // Send Message Job schemas
 export const createSendMessageJobSchema = Joi.object({
 	sessionId: Joi.number().integer().positive().required(),
