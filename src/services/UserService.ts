@@ -13,14 +13,15 @@ import {
   FilterQuery,
   ApiResponse,
   PaginatedResponse,
-  FormattedUserResponse
+  FormattedUserResponse,
+  UpdateUserRequestNew
 } from '../types';
 
 export interface UserServiceInterface {
   createUser(userData: CreateUserRequest): Promise<ApiResponse<FormattedUserResponse>>;
   getUserById(user_id: number): Promise<ApiResponse<FormattedUserResponse>>;
   getAllUsers(pagination?: PaginationQuery, filters?: FilterQuery): Promise<ApiResponse<{ users: any[]; pagination: { currentPage: number; totalPages: number; totalItems: number; itemsPerPage: number } }>>;
-  updateUser(user_id: number, userData: UpdateUserRequest): Promise<ApiResponse<FormattedUserResponse>>;
+  updateUser(user_id: number, userData: UpdateUserRequestNew): Promise<ApiResponse<FormattedUserResponse>>;
   deleteUser(user_id: number): Promise<ApiResponse<void>>;
   getUserRoles(user_id: number): Promise<ApiResponse<Role[]>>;
   assignRole(user_id: number, role_id: number): Promise<ApiResponse<void>>;
@@ -391,7 +392,7 @@ export class UserService implements UserServiceInterface {
   /**
    * Update user
    */
-  public async updateUser(user_id: number, userData: UpdateUserRequest): Promise<ApiResponse<FormattedUserResponse>> {
+  public async updateUser(user_id: number, userData: UpdateUserRequestNew): Promise<ApiResponse<FormattedUserResponse>> {
     try {
       this.logger.info('Updating user', { user_id });
 
@@ -403,18 +404,61 @@ export class UserService implements UserServiceInterface {
         };
       }
 
-      // Update user
-      await user.update(userData);
+      // If email is being changed, check for uniqueness (skip empty strings)
+      if (userData.email && userData.email.trim() !== '' && userData.email !== user.email) {
+        const existingUser = await User.findOne({ where: { email: userData.email } });
+        if (existingUser) {
+          return {
+            success: false,
+            message: 'User with this email already exists'
+          };
+        }
+      }
 
-      // Update role if provided
-      if (userData.roleId) {
-        await UserRole.destroy({ where: { user_id } });
-        await UserRole.create({ user_id, role_id: userData.roleId });
+      // Prepare update payload - only include non-empty values
+      const updatePayload: any = {};
+
+      if (userData.name !== undefined && userData.name !== null && userData.name.trim() !== '') {
+        updatePayload.name = userData.name;
+      }
+      if (userData.email !== undefined && userData.email !== null && userData.email.trim() !== '') {
+        updatePayload.email = userData.email;
+      }
+      if (userData.phone_number !== undefined && userData.phone_number !== null && userData.phone_number.trim() !== '') {
+        updatePayload.phone_number = userData.phone_number ?? "+0000000000";
+      }
+
+      // Status: handle status slug by converting to status_id (skip empty strings)
+      if (userData.status !== undefined && userData.status !== null && userData.status.trim() !== '') {
+        const statusId = await this.getStatusIdBySlug(userData.status);
+        if (statusId) {
+          updatePayload.status_id = statusId;
+        } else {
+          this.logger.warn('Invalid status slug provided', { status: userData.status });
+        }
+      }
+
+      // Apply updates to user record if there's anything to update
+      if (Object.keys(updatePayload).length > 0) {
+        await user.update(updatePayload);
+      }
+
+      // Role handling: convert role slug to roleId and update (skip empty strings)
+      if (userData.role !== undefined && userData.role !== null && userData.role.trim() !== '') {
+        const roleIdToSet = await this.getRoleIdBySlug(userData.role);
+        if (roleIdToSet) {
+          // Replace existing roles with the new one
+          await UserRole.destroy({ where: { user_id } });
+          await UserRole.create({ user_id, role_id: roleIdToSet });
+        } else {
+          this.logger.warn('Invalid role slug provided', { role: userData.role });
+        }
       }
 
       // Log activity
       await this.logUserActivity(user_id, 'user_updated', `User ${user.name} was updated`);
 
+      // Return fresh formatted user data
       const updatedUser = await this.getUserById(user_id);
       
       return {

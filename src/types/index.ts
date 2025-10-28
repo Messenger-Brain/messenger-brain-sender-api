@@ -91,6 +91,15 @@ export interface CreateUserRequest {
   email_verified: boolean;
 }
 
+
+export interface UpdateUserRequestNew {
+  name?: string;
+  email?: string;
+  phone_number?: string;
+  role?:string;
+  status?:string
+}
+
 export interface UpdateUserRequest {
   name?: string;
   email?: string;
