@@ -81,19 +81,45 @@ const authMiddleware = AuthMiddleware.getInstance();
  *           type: string
  *           minLength: 2
  *           maxLength: 200
- *         phoneNumber:
+ *           description: Name of the WhatsApp session
+ *         phone_number:
  *           type: string
- *         accountProtection:
+ *           pattern: '^\+\d{1,15}$'
+ *           description: Phone number in international format
+ *         account_protection:
  *           type: boolean
- *         logMessages:
+ *           description: Enable account protection features
+ *         log_messages:
  *           type: boolean
- *         webhookUrl:
+ *           description: Enable message logging
+ *         read_incoming_messages:
+ *           type: boolean
+ *           description: Enable the option to automatically mark messages as read when they are received
+ *         auto_reject_calls:
+ *           type: boolean
+ *           description: Enable automatic rejection of incoming calls
+ *         webhook_url:
  *           type: string
  *           format: uri
- *         webhookEnabled:
+ *           description: URL for receiving webhook notifications
+ *         webhook_enabled:
  *           type: boolean
- *         browserContextId:
- *           type: number
+ *           description: Enable webhook notifications
+ *         webhook_events:
+ *           type: array
+ *           items:
+ *             type: string
+ *           description: Array of events to receive webhook notifications for
+ *       example:
+ *         name: "Business WhatsApp"
+ *         phone_number: "+1234567890"
+ *         account_protection: true
+ *         log_messages: true
+ *         read_incoming_messages: true
+ *         auto_reject_calls: false
+ *         webhook_url: "https://example.com/webhook"
+ *         webhook_enabled: true
+ *         webhook_events: ["messages.received", "session.status", "messages.update"]
  */
 
 /**

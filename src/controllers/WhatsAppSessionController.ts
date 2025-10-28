@@ -47,13 +47,14 @@ export class WhatsAppSessionController {
 
   private readonly updateSessionSchema = Joi.object({
     name: Joi.string().min(2).max(200).optional(),
+    phone_number: Joi.string().pattern(/^\+\d{1,15}$/).optional(),
     account_protection: Joi.boolean().optional(),
     log_messages: Joi.boolean().optional(),
-    readIncomingMessages: Joi.boolean().optional(),
-    autoRejectCalls: Joi.boolean().optional(),
+    read_incoming_messages: Joi.boolean().optional(),
+    auto_reject_calls: Joi.boolean().optional(),
     webhook_url: Joi.string().uri().optional(),
     webhook_enabled: Joi.boolean().optional(),
-    webhookEvents: Joi.array().items(Joi.string()).optional()
+    webhook_events: Joi.array().items(Joi.string()).optional()
   });
 
   private readonly getSessionsSchema = Joi.object({
