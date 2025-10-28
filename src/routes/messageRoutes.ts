@@ -353,4 +353,80 @@ router.get('/stats',
   messageController.getMessageStats
 );
 
+/**
+ * @swagger
+ * /api/messages/{msgId}/info:
+ *   get:
+ *     summary: Get detailed info about a specific message
+ *     description: Returns message status, phone number, timestamps, and session metadata.
+ *     tags: [Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: msgId
+ *         required: true
+ *         schema:
+ *           type: number
+ *         description: Numeric message ID
+ *     responses:
+ *       200:
+ *         description: Message info retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Message info retrieved successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: number
+ *                       example: 42
+ *                     phoneNumber:
+ *                       type: string
+ *                       example: "50688888888"
+ *                     message:
+ *                       type: string
+ *                       example: "Hola desde la API"
+ *                     status:
+ *                       type: string
+ *                       example: "sent"
+ *                     statusName:
+ *                       type: string
+ *                       example: "Sent"
+ *                     sentAt:
+ *                       type: string
+ *                       format: date-time
+ *                     session:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: number
+ *                           example: 1
+ *                         userId:
+ *                           type: number
+ *                           example: 99
+ *                         createdAt:
+ *                           type: string
+ *                           format: date-time
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Message not found or access denied
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/:msgId/info',
+  authMiddleware.authenticate,
+  messageController.getMessageInfo
+);
+
+
 export default router;

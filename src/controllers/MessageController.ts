@@ -157,4 +157,40 @@ export class MessageController {
       });
     }
   };
+
+    /**
+   * Get extended info for a specific message
+   */
+  public getMessageInfo = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      // igual que createMessage: validar que hay usuario autenticado
+      if (!req.user || !req.user.id) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+          error: 'User not authenticated'
+        });
+        return;
+      }
+
+      // el parámetro de ruta es :msgId
+      const messageId = parseInt((req.params.msgId as string) || '0', 10);
+
+      const result = await this.messageService.getMessageInfo(messageId, req.user.id);
+
+      if (result.success) {
+        res.status(200).json(result);
+      } else {
+        res.status(404).json(result);
+      }
+    } catch (error) {
+      this.logger.error('Error getting message info', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  };
+
 }

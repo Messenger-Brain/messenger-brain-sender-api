@@ -854,6 +854,63 @@ export class MessageService implements MessageServiceInterface {
     const status = await MessageStatus.findOne({ where: { slug } });
     return status?.id || 1; // Default to first status
   }
+
+    /**
+   * Get extended message details (safe view for client)
+   */
+  public async getMessageInfo(messageId: number, user_id: number): Promise<ApiResponse<any>> {
+    try {
+      const message = await Message.findOne({
+        where: { id: messageId },
+        include: [
+          {
+            model: WhatsAppSession,
+            where: { user_id: user_id },
+            include: [{ model: User }]
+          },
+          {
+            model: MessageStatus
+          }
+        ]
+      });
+
+      if (!message) {
+        return {
+          success: false,
+          message: 'Message not found or access denied'
+        };
+      }
+
+      // armamos respuesta resumida, no todo el objeto Sequelize
+      const responseData = {
+        id: message.id,
+        phoneNumber: message.remote_jid,
+        message: message.message?.conversation,
+        status: message.MessageStatus?.slug,
+        statusName: message.MessageStatus?.name,
+        sentAt: message.sent_at,
+        session: {
+          id: message.whatsapp_session_id,
+          userId: message.WhatsAppSession?.user_id,
+          createdAt: message.WhatsAppSession?.created_at
+        }
+      };
+
+      return {
+        success: true,
+        message: 'Message info retrieved successfully',
+        data: responseData
+      };
+    } catch (error) {
+      this.logger.error('Error getting message info', error);
+      return {
+        success: false,
+        message: 'Failed to retrieve message info',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
 }
 
 export default MessageService;
