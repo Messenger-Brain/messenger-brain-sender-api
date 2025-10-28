@@ -14,6 +14,7 @@ import {
 	ApiResponse,
 	PaginatedResponse,
 } from "../types";
+import { BrowserContextService } from "./BrowserContextService";
 
 export interface WhatsAppSessionServiceInterface {
 	createSession(
@@ -110,6 +111,26 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
 					message: "Invalid phone number format",
 				};
 			}
+			let browserContextIdToUse: number | undefined =
+				sessionData.browserContextId;
+			const browserService = BrowserContextService.getInstance();
+			const createCtxResult = await browserService.createBrowserContext();
+
+			if (!createCtxResult.success || !createCtxResult.data) {
+				this.logger.error("Failed to create browser context for new session", {
+					error: createCtxResult.error,
+				});
+				return {
+					success: false,
+					message: "Failed to create browser context",
+					error: createCtxResult.error || "Unknown error",
+				};
+			}
+
+			browserContextIdToUse = createCtxResult.data.id;
+			this.logger.info("Browser context created for new session", {
+				browserContextId: browserContextIdToUse,
+			});
 
 			// Check if user already has a session with this phone number
 			const existingSession = await WhatsAppSession.findOne({
@@ -149,8 +170,8 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
 				createData.webhook_url = sessionData.webhookUrl;
 			}
 
-			if (sessionData.browserContextId) {
-				createData.browser_context_id = sessionData.browserContextId;
+			if (browserContextIdToUse) {
+				createData.browser_context_id = browserContextIdToUse;
 			}
 
 			const session = await WhatsAppSession.create(createData);
