@@ -21,7 +21,7 @@ export interface WhatsAppSessionServiceInterface {
 	): Promise<ApiResponse<WhatsAppSession>>;
 	getSessionById(
 		sessionId: number,
-		user_id: number
+		user_id?: number
 	): Promise<ApiResponse<WhatsAppSession>>;
 	getUserSessions(
 		user_id: number,
@@ -137,10 +137,6 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
 				webhook_enabled: sessionData.webhookEnabled,
 			};
 
-			if (sessionData.webhookEvents) {
-				createData.webhook_events = sessionData.webhookEvents;
-			}
-
 			if (sessionData.webhookUrl) {
 				createData.webhook_url = sessionData.webhookUrl;
 			}
@@ -181,21 +177,14 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
 	 */
 	public async getSessionById(
 		sessionId: number,
-		user_id: number
+		user_id?: number
 	): Promise<ApiResponse<WhatsAppSession>> {
 		try {
+			const whereClause: any = { id: sessionId };
+			if (user_id !== undefined) whereClause.user_id = user_id;
+
 			const session = await WhatsAppSession.findOne({
-				where: { id: sessionId, user_id: user_id },
-				include: [
-					{
-						model: User,
-						as: "User",
-					},
-					{
-						model: WhatsAppSessionStatus,
-						as: "WhatsAppSessionStatus",
-					},
-				],
+				where: whereClause,
 			});
 
 			if (!session) {
@@ -359,9 +348,6 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
 				}),
 				...(sessionData.webhookEnabled !== undefined && {
 					webhook_enabled: sessionData.webhookEnabled,
-				}),
-				...(sessionData.webhookEvents !== undefined && {
-					webhook_events: sessionData.webhookEvents,
 				}),
 				...(sessionData.browserContextId !== undefined && {
 					browser_context_id: sessionData.browserContextId,
@@ -874,16 +860,6 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
 
 			const { count, rows } = await WhatsAppSession.findAndCountAll({
 				where: { user_id },
-				include: [
-					{
-						model: User,
-						as: "User",
-					},
-					{
-						model: WhatsAppSessionStatus,
-						as: "WhatsAppSessionStatus",
-					},
-				],
 				limit,
 				offset,
 				order: [["created_at", "DESC"]],
