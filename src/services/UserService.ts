@@ -542,8 +542,6 @@ export class UserService implements UserServiceInterface {
       // Delete user roles first
       await UserRole.destroy({ where: { user_id: user_id } });
 
-      // Delete user activities
-      await UserActivity.destroy({ where: { user_id: user_id } });
 
       // Delete user
       await user.destroy();
