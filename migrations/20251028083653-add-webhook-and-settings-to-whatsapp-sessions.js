@@ -26,15 +26,8 @@ module.exports = {
       comment: 'Automatically reject incoming calls'
     });
 
-    // Add api_key as STRING column (NOT NULL, auto-generated on session creation)
-    await queryInterface.addColumn('whatsapp_sessions', 'api_key', {
-      type: Sequelize.STRING(255),
-      allowNull: false,
-      unique: true,
-      comment: 'API key for this WhatsApp session - auto-generated on creation'
-    });
-
     // Add webhook_secret as STRING column (NOT NULL, auto-generated on session creation)
+    // Note: api_key already exists from migration 20251027204427-add-api-key-to-whatsapp-sessions.js (from qa branch)
     await queryInterface.addColumn('whatsapp_sessions', 'webhook_secret', {
       type: Sequelize.STRING(255),
       allowNull: false,
@@ -44,8 +37,8 @@ module.exports = {
 
   async down (queryInterface, Sequelize) {
     // Remove columns in reverse order
+    // Note: api_key is NOT removed here as it belongs to migration 20251027204427
     await queryInterface.removeColumn('whatsapp_sessions', 'webhook_secret');
-    await queryInterface.removeColumn('whatsapp_sessions', 'api_key');
     await queryInterface.removeColumn('whatsapp_sessions', 'auto_reject_calls');
     await queryInterface.removeColumn('whatsapp_sessions', 'read_incoming_messages');
     await queryInterface.removeColumn('whatsapp_sessions', 'webhook_events');
