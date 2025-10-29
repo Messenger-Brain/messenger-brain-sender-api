@@ -47,7 +47,7 @@ export class WhatsAppSessionController {
 
   private readonly updateSessionSchema = Joi.object({
     name: Joi.string().min(2).max(200).optional(),
-    phone_number: Joi.string().pattern(/^\+\d{1,15}$/).optional(),
+    phone_number: Joi.string().pattern(/^\+\d+$/).optional(),
     account_protection: Joi.boolean().optional(),
     log_messages: Joi.boolean().optional(),
     read_incoming_messages: Joi.boolean().optional(),
