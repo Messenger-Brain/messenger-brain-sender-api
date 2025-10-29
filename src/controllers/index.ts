@@ -5,3 +5,4 @@ export { MessageController } from './MessageController';
 export { SendMessageJobController } from './SendMessageJobController';
 export { SubscriptionController } from './SubscriptionController';
 export { UserPreferenceController } from './UserPreferenceController';
+export { FetchContactsJobController } from './FetchContactsJobController';

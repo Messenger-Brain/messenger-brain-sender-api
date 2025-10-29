@@ -1,4 +1,4 @@
-import { Request } from 'express';
+import { Request } from "express";
 
 // Express Request extension for user authentication
 declare global {
@@ -114,7 +114,7 @@ export interface PaginationQuery {
   page?: number;
   limit?: number;
   sortBy?: string;
-  sortOrder?: 'ASC' | 'DESC';
+  sortOrder?: "ASC" | "DESC";
 }
 
 export interface FilterQuery {
@@ -175,6 +175,22 @@ export interface CreateSendMessageJobRequest {
 export interface UpdateSendMessageJobRequest {
   statusId?: number;
   log?: any;
+}
+
+export interface CreateFetchContactsJobRequest {
+  whatsapp_session_id: number;
+  browser_context_id: number;
+  log?: any;
+}
+
+export interface UpdateFetchContactsJobRequest {
+  statusId?: number;
+  log?: any;
+}
+
+export interface ContactsJobData {
+  browser_context_id: number;
+  fetch_contacts_job_id?: number;
 }
 
 // Subscription interfaces

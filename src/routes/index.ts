@@ -6,6 +6,7 @@ import messageRoutes from './messageRoutes';
 import subscriptionRoutes from './subscriptionRoutes';
 import sendMessageJobRoutes from './sendMessageJobRoutes';
 import userPreferenceRoutes from './userPreferenceRoutes';
+import fetchContactsJobRoutes from './fetchContactsJobRoutes';
 
 const router = Router();
 
@@ -16,6 +17,7 @@ router.use('/whatsapp-sessions', whatsappSessionRoutes);
 router.use('/messages', messageRoutes);
 router.use('/subscriptions', subscriptionRoutes);
 router.use('/send-message-jobs', sendMessageJobRoutes);
+router.use('/fetch-contacts-jobs', fetchContactsJobRoutes);
 router.use('/user-preferences', userPreferenceRoutes);
 
 /**
@@ -128,6 +130,11 @@ router.get('/', (req, res) => {
           path: '/api/send-message-jobs',
           method: 'GET, POST, PUT, DELETE',
           description: 'Bulk message job management endpoints'
+        },
+        {
+          path: '/api/fetch-contacts-jobs',
+          method: 'GET, POST, PUT, DELETE',
+          description: 'Fetch contacts job management endpoints'
         },
         {
           path: '/api/user-preferences',
