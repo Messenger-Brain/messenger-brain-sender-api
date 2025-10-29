@@ -4,6 +4,7 @@ import { sequelize } from '../config/sequelize';
 // WhatsAppSession attributes interface
 interface WhatsAppSessionAttributes {
   id: number;
+  api_key: string;
   name: string;
   user_id: number;
   phone_number: string;
@@ -12,7 +13,6 @@ interface WhatsAppSessionAttributes {
   log_messages: boolean;
   webhook_url?: string;
   webhook_enabled: boolean;
-  api_key?: string;
   webhook_secret?: string;
   browser_context_id?: number;
   created_at?: Date;
@@ -20,11 +20,12 @@ interface WhatsAppSessionAttributes {
 }
 
 // WhatsAppSession creation attributes
-interface WhatsAppSessionCreationAttributes extends Optional<WhatsAppSessionAttributes, 'id' | 'webhook_url' | 'api_key' | 'webhook_secret' | 'browser_context_id' | 'created_at' | 'updated_at'> {}
+interface WhatsAppSessionCreationAttributes extends Optional<WhatsAppSessionAttributes, 'id' | 'webhook_url' | 'webhook_secret' | 'browser_context_id' | 'created_at' | 'updated_at'> {}
 
 // WhatsAppSession model class
 class WhatsAppSession extends Model<WhatsAppSessionAttributes, WhatsAppSessionCreationAttributes> implements WhatsAppSessionAttributes {
   public id!: number;
+  public api_key!: string;
   public name!: string;
   public user_id!: number;
   public phone_number!: string;
@@ -33,7 +34,6 @@ class WhatsAppSession extends Model<WhatsAppSessionAttributes, WhatsAppSessionCr
   public log_messages!: boolean;
   public webhook_url?: string;
   public webhook_enabled!: boolean;
-  public api_key?: string;
   public webhook_secret?: string;
   public browser_context_id?: number;
   public readonly created_at!: Date;
@@ -58,6 +58,11 @@ WhatsAppSession.init(
       type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true,
+    },
+    api_key: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+      unique: true,
     },
     name: {
       type: DataTypes.STRING(200),
@@ -113,11 +118,6 @@ WhatsAppSession.init(
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,
-    },
-    api_key: {
-      type: DataTypes.STRING(255),
-      allowNull: true,
-      unique: true,
     },
     webhook_secret: {
       type: DataTypes.STRING(255),
