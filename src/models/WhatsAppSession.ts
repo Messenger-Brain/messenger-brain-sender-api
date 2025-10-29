@@ -12,13 +12,15 @@ interface WhatsAppSessionAttributes {
   log_messages: boolean;
   webhook_url?: string;
   webhook_enabled: boolean;
+  api_key?: string;
+  webhook_secret?: string;
   browser_context_id?: number;
   created_at?: Date;
   updated_at?: Date;
 }
 
 // WhatsAppSession creation attributes
-interface WhatsAppSessionCreationAttributes extends Optional<WhatsAppSessionAttributes, 'id' | 'webhook_url' | 'browser_context_id' | 'created_at' | 'updated_at'> {}
+interface WhatsAppSessionCreationAttributes extends Optional<WhatsAppSessionAttributes, 'id' | 'webhook_url' | 'api_key' | 'webhook_secret' | 'browser_context_id' | 'created_at' | 'updated_at'> {}
 
 // WhatsAppSession model class
 class WhatsAppSession extends Model<WhatsAppSessionAttributes, WhatsAppSessionCreationAttributes> implements WhatsAppSessionAttributes {
@@ -31,6 +33,8 @@ class WhatsAppSession extends Model<WhatsAppSessionAttributes, WhatsAppSessionCr
   public log_messages!: boolean;
   public webhook_url?: string;
   public webhook_enabled!: boolean;
+  public api_key?: string;
+  public webhook_secret?: string;
   public browser_context_id?: number;
   public readonly created_at!: Date;
   public readonly updated_at!: Date;
@@ -109,6 +113,15 @@ WhatsAppSession.init(
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,
+    },
+    api_key: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      unique: true,
+    },
+    webhook_secret: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
     },
     browser_context_id: {
       type: DataTypes.INTEGER,

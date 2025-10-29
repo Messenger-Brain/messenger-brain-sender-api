@@ -6,6 +6,7 @@ import messageRoutes from './messageRoutes';
 import subscriptionRoutes from './subscriptionRoutes';
 import sendMessageJobRoutes from './sendMessageJobRoutes';
 import userPreferenceRoutes from './userPreferenceRoutes';
+import statusRoutes from './statusRoutes';
 
 const router = Router();
 
@@ -17,6 +18,7 @@ router.use('/messages', messageRoutes);
 router.use('/subscriptions', subscriptionRoutes);
 router.use('/send-message-jobs', sendMessageJobRoutes);
 router.use('/user-preferences', userPreferenceRoutes);
+router.use('/status', statusRoutes);
 
 /**
  * @swagger

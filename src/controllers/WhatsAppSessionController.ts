@@ -483,39 +483,6 @@ export class WhatsAppSessionController {
   };
 
   /**
-   * Get active session status (without requiring session ID)
-   * @route GET /api/status
-   */
-  public getActiveStatus = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const userId = (req as any).user?.id;
-
-      if (!userId) {
-        res.status(401).json({ 
-          success: false, 
-          message: 'Unauthorized' 
-        });
-        return;
-      }
-
-      this.logger.info('Get active session status request', { userId });
-
-      const result = await this.sessionService.getActiveSessionStatus(userId);
-
-      // Return only the status object according to documentation
-      if (result.success && result.data) {
-        res.status(200).json(result.data);
-      } else {
-        res.status(200).json({ status: 'disconnected' });
-      }
-
-    } catch (error) {
-      this.logger.error('Get active session status error', error);
-      res.status(200).json({ status: 'disconnected' });
-    }
-  };
-
-  /**
    * Get user's sessions
    * @route GET /api/whatsapp-sessions/user/:userId
    */
@@ -619,6 +586,60 @@ export class WhatsAppSessionController {
       selectSession: this.validationMiddleware.validateParams(this.selectSessionSchema)
     };
   }
+
+  /**
+   * Get session status by API key
+   * @route GET /api/status
+   */
+  public getStatusByApiKey = async (req: Request, res: Response): Promise<void> => {
+    try {
+      // Extract api_key from Authorization header
+      const apiKey = req.headers.authorization?.replace('Bearer ', '');
+      
+      if (!apiKey) {
+        this.logger.warn('API key missing in request');
+        res.status(200).json({ status: 'disconnected' });
+        return;
+      }
+
+      this.logger.info('Getting session status by API key');
+
+      // Import models here to avoid circular dependency
+      const { default: WhatsAppSession } = await import('../models/WhatsAppSession');
+      const { default: WhatsAppSessionStatus } = await import('../models/WhatsAppSessionStatus');
+
+      // Find session by api_key
+      const session = await WhatsAppSession.findOne({
+        where: { api_key: apiKey },
+        include: [
+          {
+            model: WhatsAppSessionStatus,
+            as: 'WhatsAppSessionStatus'
+          }
+        ]
+      });
+
+      if (!session) {
+        this.logger.warn('Session not found for provided API key');
+        res.status(200).json({ status: 'disconnected' });
+        return;
+      }
+
+      const status = session.WhatsAppSessionStatus?.slug || 'disconnected';
+
+      this.logger.info('Session status retrieved by API key', { 
+        sessionId: session.id, 
+        status 
+      });
+
+      // Return only the status according to documentation
+      res.status(200).json({ status });
+
+    } catch (error) {
+      this.logger.error('Get status by API key error', error);
+      res.status(200).json({ status: 'disconnected' });
+    }
+  };
 
   /**
    * Get rate limiting middleware for each endpoint
