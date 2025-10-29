@@ -254,7 +254,6 @@ export class WhatsAppSessionController {
     try {
       const sessionId = parseInt((req.params.id as string) || '0');
       const userId = (req as any).user?.id;
-      const userRole = (req as any).user?.role;
       
       this.logger.info('WhatsApp session deletion attempt', { sessionId, userId });
 
@@ -262,21 +261,23 @@ export class WhatsAppSessionController {
 
       if (result.success) {
         this.loggingMiddleware.logWhatsAppEvent('session_deleted', sessionId, userId, true);
-        res.status(200).json(result);
+        res.status(200).json({
+          Message: 'Session deleted successfully'
+        });
       } else {
         this.logger.warn('WhatsApp session deletion failed', { 
           sessionId, 
           userId, 
           error: (result as any).error 
         });
-        res.status(400).json(result);
+        res.status(400).json({
+          Message: result.message || 'Failed to delete session'
+        });
       }
     } catch (error) {
       this.logger.error('WhatsApp session deletion error', error);
       res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: 'Session deletion failed'
+        Message: 'Internal server error'
       });
     }
   };

@@ -357,7 +357,8 @@ router.put('/:id',
  * @swagger
  * /api/whatsapp-sessions/{id}:
  *   delete:
- *     summary: Delete WhatsApp session by ID
+ *     summary: Delete WhatsApp session
+ *     description: Delete a WhatsApp session by ID. Only the session owner or admin can delete it.
  *     tags: [WhatsApp Sessions]
  *     security:
  *       - bearerAuth: []
@@ -366,18 +367,27 @@ router.put('/:id',
  *         name: id
  *         required: true
  *         schema:
- *           type: number
+ *           type: integer
+ *         description: ID of the WhatsApp session to delete
  *     responses:
  *       200:
- *         description: WhatsApp session deleted successfully
+ *         description: Session deleted successfully
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
+ *                 Message:
+ *                   type: string
+ *                   example: "Session deleted successfully"
+ *       400:
+ *         description: Failed to delete session
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 Message:
  *                   type: string
  *       401:
  *         description: Unauthorized
@@ -385,6 +395,14 @@ router.put('/:id',
  *         description: WhatsApp session not found
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 Message:
+ *                   type: string
+ *                   example: "Internal server error"
  */
 router.delete('/:id',
   authMiddleware.authenticate,
