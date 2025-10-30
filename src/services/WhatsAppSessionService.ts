@@ -270,56 +270,23 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
 
       // Update session
       await session.update({
-        ...(sessionData.name !== undefined && { name: sessionData.name }),
         ...(sessionData.phoneNumber !== undefined && { phone_number: sessionData.phoneNumber }),
         ...(sessionData.statusId !== undefined && { status_id: sessionData.statusId }),
         ...(sessionData.accountProtection !== undefined && { account_protection: sessionData.accountProtection }),
         ...(sessionData.logMessages !== undefined && { log_messages: sessionData.logMessages }),
         ...(sessionData.webhookUrl !== undefined && { webhook_url: sessionData.webhookUrl }),
         ...(sessionData.webhookEnabled !== undefined && { webhook_enabled: sessionData.webhookEnabled }),
-        ...(sessionData.webhookEvents !== undefined && { webhook_events: sessionData.webhookEvents }),
-        ...(sessionData.readIncomingMessages !== undefined && { read_incoming_messages: sessionData.readIncomingMessages }),
-        ...(sessionData.autoRejectCalls !== undefined && { auto_reject_calls: sessionData.autoRejectCalls }),
         ...(sessionData.browserContextId !== undefined && { browser_context_id: sessionData.browserContextId })
       });
 
-      // Reload session with relations
-      await session.reload({
-        include: [
-          {
-            model: User,
-            as: 'User'
-          },
-          {
-            model: WhatsAppSessionStatus,
-            as: 'WhatsAppSessionStatus'
-          }
-        ]
-      });
-
-      // Format response according to documentation
-      const responseData = {
-        id: session.id,
-        name: session.name,
-        phone_number: session.phone_number,
-        status: session.WhatsAppSessionStatus?.slug || 'unknown',
-        account_protection: session.account_protection,
-        log_messages: session.log_messages,
-        read_incoming_messages: session.read_incoming_messages,
-        auto_reject_calls: session.auto_reject_calls,
-        webhook_url: session.webhook_url || null,
-        webhook_enabled: session.webhook_enabled,
-        webhook_events: session.webhook_events || null,
-        created_at: session.created_at,
-        updated_at: session.updated_at
-      };
+      const updatedSession = await this.getSessionById(sessionId, user_id);
 
       this.logger.info('WhatsApp session updated successfully', { sessionId });
 
       return {
         success: true,
         message: 'Session updated successfully',
-        data: responseData as any
+        data: updatedSession.data!
       };
 
     } catch (error) {

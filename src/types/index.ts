@@ -141,16 +141,12 @@ export interface CreateWhatsAppSessionRequest {
 }
 
 export interface UpdateWhatsAppSessionRequest {
-  name?: string;
   phoneNumber?: string;
   statusId?: number;
   accountProtection?: boolean;
   logMessages?: boolean;
   webhookUrl?: string;
   webhookEnabled?: boolean;
-  webhookEvents?: string[];
-  readIncomingMessages?: boolean;
-  autoRejectCalls?: boolean;
   browserContextId?: number;
 }
 
