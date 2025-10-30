@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { MessageController } from '../controllers/MessageController';
 import { AuthMiddleware } from '../middleware/auth';
 import { ValidationMiddleware } from '../middleware/validation';
+import { WhatsappSessionsTokenMiddleware } from '../middleware/whatsappSessionsToken';
 import {
   createMessageSchema,
   bulkMessageSchema,
@@ -12,6 +13,7 @@ const router = Router();
 const messageController = new MessageController();
 const validationMiddleware = ValidationMiddleware.getInstance();
 const authMiddleware = AuthMiddleware.getInstance();
+const tokenMiddleware = WhatsappSessionsTokenMiddleware.getInstance();
 
 /**
  * @swagger
@@ -144,6 +146,7 @@ const authMiddleware = AuthMiddleware.getInstance();
  */
 router.post('/',
   authMiddleware.authenticate,
+  tokenMiddleware.validateApiKey,
   validationMiddleware.validateBody(createSendMessageSchema),
   messageController.createMessage
 );
