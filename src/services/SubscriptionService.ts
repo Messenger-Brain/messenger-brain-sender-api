@@ -423,6 +423,7 @@ export class SubscriptionService implements SubscriptionServiceInterface {
           },
           {
             model: Subscription,
+            as: 'Subscription',
             include: [
               {
                 model: SubscriptionStatus,
