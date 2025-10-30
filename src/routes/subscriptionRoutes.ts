@@ -50,21 +50,15 @@ const authMiddleware = AuthMiddleware.getInstance();
  *           type: number
  *         subscriptionId:
  *           type: number
- *         statusId:
+ *         status_id:
  *           type: number
- *         startDate:
- *           type: string
- *           format: date-time
- *         endDate:
- *           type: string
- *           format: date-time
  *         createdAt:
  *           type: string
  *           format: date-time
  *         updatedAt:
  *           type: string
  *           format: date-time
- *         espiresAt:
+ *         expiresAt:
  *           type: string
  *           format: date-time
  *         subscription:

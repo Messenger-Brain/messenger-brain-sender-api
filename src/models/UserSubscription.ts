@@ -23,7 +23,7 @@ class UserSubscription extends Model<UserSubscriptionAttributes, UserSubscriptio
   public status_id!: number;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
-  public expiresAt!: Date;
+  public readonly expiresAt!: Date;
 
   // Associations
   public User?: any;

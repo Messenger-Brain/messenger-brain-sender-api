@@ -155,9 +155,14 @@ export class SubscriptionController {
   /**
    * Get user's current subscription
    */
+
+
   public getUserSubscriptions = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const userId = parseInt((req.params.user_id as string) || '0');
+
+      this.logger.info(`Fetched subscriptions for user ID ${req.params.userId}: `);
+      const userId = parseInt((req.params.userId as string) || '0');
+      this.logger.info(`Fetched subscriptions for user ID ${req.params.userId}: `);
       const result = await this.subscriptionService.getUserSubscriptions(userId);
       
       if (result.success) {
