@@ -181,6 +181,14 @@ export const createSendMessageJobSchema = Joi.object({
   priority: Joi.number().integer().min(1).max(10).default(5)
 });
 
+// Fetch Contacts Job schemas
+export const createFetchContactsJobSchema = Joi.object({
+  whatsapp_session_id: Joi.number().integer().positive().required(),
+  delay: Joi.number().integer().min(1000).max(60000).default(2000),
+  priority: Joi.number().integer().min(1).max(10).default(5)
+});
+
+
 // User Preference schemas
 export const createUserPreferenceSchema = Joi.object({
   systemPreferenceId: Joi.number().integer().positive().required(),
