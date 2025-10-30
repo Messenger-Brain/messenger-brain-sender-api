@@ -6,7 +6,7 @@ interface UserSubscriptionAttributes {
   id: number;
   user_id: number;
   subscription_id: number;
-  status_id: number;
+  user_subscription_status_id: number;
   created_at?: Date;
   updated_at?: Date;
   expires_at?: Date;
@@ -20,10 +20,10 @@ class UserSubscription extends Model<UserSubscriptionAttributes, UserSubscriptio
   public id!: number;
   public user_id!: number;
   public subscription_id!: number;
-  public status_id!: number;
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
-  public readonly expiresAt!: Date;
+  public user_subscription_status_id!: number;
+  public readonly created_at!: Date;
+  public readonly updated_at!: Date;
+  public readonly expires_at!: Date;
 
   // Associations
   public User?: any;
@@ -60,7 +60,7 @@ UserSubscription.init(
         key: 'id',
       },
     },
-    status_id: {
+    user_subscription_status_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
@@ -101,7 +101,7 @@ UserSubscription.init(
         fields: ['subscription_id'],
       },
       {
-        fields: ['status_id'],
+        fields: ['user_subscription_status_id'],
       },
     ],
   }

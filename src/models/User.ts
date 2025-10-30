@@ -37,6 +37,7 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   public Tokens?: any[];
   public UserPreferences?: any[];
   public UserSubscriptions?: any[];
+  public ActiveSubscription?: any;
   public UserActivities?: any[];
   public WhatsAppSessions?: any[];
   public Messages?: any[];

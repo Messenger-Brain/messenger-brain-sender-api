@@ -27,6 +27,13 @@ export type AuthenticatedRequest = Request & {
 };
 
 // Common API Response types
+export interface UserSubscriptionInfo {
+  planId: number;
+  planName: string;
+  status: string;
+  expiresAt: Date;
+}
+
 export interface FormattedUserResponse {
   id: number;
   name: string;
@@ -36,6 +43,7 @@ export interface FormattedUserResponse {
   status: string;
   emailVerified: boolean;
   createdAt: Date;
+  subscription?: UserSubscriptionInfo;
 }
 
 export interface FormattedUserResponseUpdated {

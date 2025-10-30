@@ -40,6 +40,15 @@ export function setupAssociations(): void {
     as: 'Users',
   });
 
+  // Add Active Subscription association
+  User.hasOne(UserSubscription, {
+    foreignKey: 'user_id',
+    as: 'ActiveSubscription',
+    scope: {
+      user_subscription_status_id: 1 // Active status
+    }
+  });
+
   // User-Role associations (Many-to-Many)
   User.belongsToMany(Role, {
     through: UserRole,
@@ -140,7 +149,7 @@ export function setupAssociations(): void {
   });
 
   UserSubscription.belongsTo(UserSubscriptionStatus, {
-    foreignKey: 'status_id',
+    foreignKey: 'user_subscription_status_id',
     as: 'UserSubscriptionStatus',
   });
 
