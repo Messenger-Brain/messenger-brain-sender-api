@@ -3,9 +3,12 @@ import UserRole from '../models/UserRole';
 import Role from '../models/Role';
 import UserStatus from '../models/UserStatus';
 import UserActivity from '../models/UserActivity';
+import Token from '../models/Token';
+import TokenType from '../models/TokenType';
 import { ConfigService } from '../config/ConfigService';
 import Logger from '../utils/logger';
 import { Op } from 'sequelize';
+import crypto from 'crypto';
 import { 
   CreateUserRequest, 
   UpdateUserRequest, 
@@ -24,6 +27,8 @@ export interface UserServiceInterface {
   getAllUsers(pagination?: PaginationQuery, filters?: FilterQuery): Promise<ApiResponse<{ users: any[]; pagination: { currentPage: number; totalPages: number; totalItems: number; itemsPerPage: number } }>>;
   updateUser(user_id: number, userData: UpdateUserRequestNew): Promise<ApiResponse<FormattedUserResponseUpdated>>;
   deleteUser(user_id: number): Promise<ApiResponse<void>>;
+  requestDeleteProfile(user_id: number): Promise<ApiResponse<{ expiresAt: Date }>>;
+  confirmDeleteProfile(user_id: number, token: string, password: string, confirmation: string): Promise<ApiResponse<void>>;
   getUserRoles(user_id: number): Promise<ApiResponse<Role[]>>;
   assignRole(user_id: number, role_id: number): Promise<ApiResponse<void>>;
   removeRole(user_id: number, role_id: number): Promise<ApiResponse<void>>;
@@ -525,6 +530,50 @@ export class UserService implements UserServiceInterface {
   }
 
   /**
+   * Update authenticated user's own profile
+   */
+  public async updateProfile(user_id: number, profileData: Partial<{ name: string; phone_number: string }>): Promise<ApiResponse<FormattedUserResponse>> {
+    try {
+      this.logger.info('Updating user profile', { user_id });
+
+      const user = await User.findByPk(user_id);
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found'
+        };
+      }
+
+      const allowedFields: Array<keyof typeof profileData> = ['name', 'phone_number'];
+      const dataToUpdate: any = {};
+      for (const key of allowedFields) {
+        if (profileData[key] !== undefined) {
+          dataToUpdate[key] = profileData[key as keyof typeof profileData];
+        }
+      }
+
+      await user.update(dataToUpdate);
+      await this.logUserActivity(user_id, 'profile_updated', `User ${user.name} updated own profile`);
+
+      const updatedUser = await this.getUserById(user_id);
+
+      return {
+        success: true,
+        message: 'Profile updated successfully',
+        data: updatedUser.data!
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to update profile', error);
+      return {
+        success: false,
+        message: 'Failed to update profile',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
    * Delete user
    */
   public async deleteUser(user_id: number): Promise<ApiResponse<void>> {
@@ -538,11 +587,6 @@ export class UserService implements UserServiceInterface {
           message: 'User not found'
         };
       }
-
-      // Delete user roles first
-      await UserRole.destroy({ where: { user_id: user_id } });
-
-
       // Delete user
       await user.destroy();
 
@@ -558,6 +602,202 @@ export class UserService implements UserServiceInterface {
       return {
         success: false,
         message: 'Failed to delete user',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Request to delete authenticated users own profile
+   */
+  public async requestDeleteProfile(user_id: number): Promise<ApiResponse<{ expiresAt: Date }>> {
+    try {
+      this.logger.info('Requesting profile deletion', { user_id });
+
+      const user = await User.findByPk(user_id);
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found',
+          error: 'User not found'
+        };
+      }
+
+      const adminRole = await Role.findOne({ where: { slug: 'admin' } });
+      if (adminRole) {
+        const userHasAdminRole = await UserRole.findOne({
+          where: { 
+            user_id: user_id,
+            role_id: adminRole.id
+          }
+        });
+
+        if (userHasAdminRole) {
+          this.logger.warn('Admin attempted to request profile deletion', { user_id });
+          return {
+            success: false,
+            message: 'Admin users cannot delete their own accounts',
+            error: 'Admin cannot delete own account'
+          };
+        }
+      }
+
+      const deleteToken = crypto.randomBytes(5).toString('hex').toUpperCase();
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 24); // Token expires in 24 hours
+
+      let tokenType = await TokenType.findOne({ where: { slug: 'delete_account' } });
+      if (!tokenType) {
+        tokenType = await TokenType.create({
+          slug: 'delete_account',
+          description: 'Token para confirmar eliminación de cuenta'
+        });
+      }
+
+      await Token.destroy({
+        where: {
+          user_id: user_id,
+          token_type_id: tokenType.id
+        }
+      });
+
+      await Token.create({
+        user_id: user_id,
+        token_type_id: tokenType.id,
+        value: deleteToken
+      });
+
+      const appConfig = this.configService.getAppConfig();
+      
+      this.logger.info('Delete account token generated', {
+        user_id,
+        token: deleteToken,
+        expiresAt,
+        email: user.email,
+      });
+
+      try {
+        const emailService = (await import('./EmailService')).default;
+        await emailService.sendAccountDeletionRequestEmail(user.email, user.name, deleteToken, expiresAt);
+      } catch (error) {
+        this.logger.error('Failed to send deletion request email', error);
+      }
+
+      return {
+        success: true,
+        message: 'Profile deletion requested. Please check your email to confirm.',
+        data: {
+          expiresAt
+        }
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to request profile deletion', error);
+      return {
+        success: false,
+        message: 'Failed to request profile deletion',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Confirm and execute profile deletion with token, password and confirmation
+   */
+  public async confirmDeleteProfile(user_id: number, token: string, password: string, confirmation: string): Promise<ApiResponse<void>> {
+    try {
+      this.logger.info('Confirming profile deletion', { user_id });
+
+      // Verify confirmation word
+      if (confirmation !== 'DELETE') {
+        return {
+          success: false,
+          message: 'Confirmation must be "DELETE"',
+          error: 'Invalid confirmation'
+        };
+      }
+
+      const user = await User.findByPk(user_id);
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found',
+          error: 'User not found'
+        };
+      }
+
+      // Verify password
+      const isPasswordValid = await user.verifyPassword(password);
+      if (!isPasswordValid) {
+        return {
+          success: false,
+          message: 'Invalid password',
+          error: 'Invalid password'
+        };
+      }
+
+      const tokenType = await TokenType.findOne({ where: { slug: 'delete_account' } });
+      if (!tokenType) {
+        return {
+          success: false,
+          message: 'Invalid token',
+          error: 'Token type not found'
+        };
+      }
+
+      const storedToken = await Token.findOne({
+        where: {
+          user_id: user_id,
+          token_type_id: tokenType.id,
+          value: token
+        }
+      });
+
+      if (!storedToken) {
+        return {
+          success: false,
+          message: 'Invalid or expired token',
+          error: 'Invalid or expired token'
+        };
+      }
+
+      const tokenAge = Date.now() - storedToken.created_at.getTime();
+      const twentyFourHours = 24 * 60 * 60 * 1000;
+      
+      if (tokenAge > twentyFourHours) {
+        await storedToken.destroy();
+        return {
+          success: false,
+          message: 'The token has expired. Please request a new one.',
+          error: 'Token expired'
+        };
+      }
+
+      const userEmail = user.email;
+      const userName = user.name;
+
+      await storedToken.destroy();
+
+      const result = await this.deleteUser(user_id);
+      
+      if (result.success) {
+        this.logger.info('Profile deleted successfully after confirmation', { user_id, email: userEmail });
+        
+        try {
+          const emailService = (await import('./EmailService')).default;
+          await emailService.sendAccountDeletionEmail(userEmail, userName);
+        } catch (error) {
+          this.logger.error('Failed to send account deletion email', error);
+        }
+      }
+
+      return result;
+
+    } catch (error) {
+      this.logger.error('Failed to confirm profile deletion', error);
+      return {
+        success: false,
+        message: 'Failed to confirm profile deletion',
         error: error instanceof Error ? error.message : 'Unknown error'
       };
     }

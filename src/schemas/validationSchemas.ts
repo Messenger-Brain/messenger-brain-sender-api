@@ -62,6 +62,37 @@ export const updateUserSchema = Joi.object({
   status: Joi.string().allow('', null).valid('active', 'inactive', 'suspended').optional()
 }).min(1);
 
+// Profile update schema (for authenticated user updating own profile)
+export const updateProfileSchema = Joi.object({
+  name: Joi.string().min(2).max(200).optional(),
+  phone_number: Joi.string().allow('', null).pattern(/^\+\d+$/).min(8).max(15).optional().messages({
+    'string.pattern.base': 'Phone number must start with + and contain only digits',
+    'string.min': 'Phone number must be at least {#limit} characters',
+    'string.max': 'Phone number must be at most {#limit} characters'
+  }),
+  avatar: Joi.string().uri().max(255).allow('', null).optional().messages({
+    'string.uri': 'Avatar must be a valid URL',
+    'string.max': 'Avatar URL must be at most {#limit} characters'
+  })
+});
+
+// Confirm delete profile schema (with token from email)
+export const confirmDeleteProfileSchema = Joi.object({
+  token: Joi.string().required().messages({
+    'string.empty': 'Token is required',
+    'any.required': 'Token is required'
+  }),
+  password: Joi.string().required().messages({
+    'string.empty': 'Password is required',
+    'any.required': 'Password is required'
+  }),
+  confirmation: Joi.string().valid('DELETE').required().messages({
+    'any.only': 'Confirmation must be "DELETE"',
+    'string.empty': 'Confirmation is required',
+    'any.required': 'Confirmation is required'
+  })
+});
+
 export const assignRoleSchema = Joi.object({
   roleId: Joi.number().integer().positive().required()
 });
@@ -119,6 +150,21 @@ export const createSubscriptionSchema = Joi.object({
 export const updateSubscriptionSchema = Joi.object({
   statusId: Joi.number().integer().positive().required(),
   notes: Joi.string().max(1000).optional()
+});
+
+// Admin subscription schemas
+export const createSubscriptionPlanSchema = Joi.object({
+  slug: Joi.string().min(2).max(100).pattern(/^[a-z0-9_-]+$/i).required(),
+  description: Joi.string().min(5).max(500).required(),
+  statusId: Joi.number().integer().positive().required(),
+  price: Joi.number().precision(2).min(0).required()
+});
+
+export const updateSubscriptionPlanSchema = Joi.object({
+  slug: Joi.string().min(2).max(100).pattern(/^[a-z0-9_-]+$/i).optional(),
+  description: Joi.string().min(5).max(500).optional(),
+  statusId: Joi.number().integer().positive().optional(),
+  price: Joi.number().precision(2).min(0).optional()
 });
 
 // Send Message Job schemas

@@ -4,7 +4,9 @@ import { AuthMiddleware } from '../middleware/auth';
 import { ValidationMiddleware } from '../middleware/validation';
 import { 
   createUserSchema, 
-  updateUserSchema, 
+  updateUserSchema,
+  updateProfileSchema,
+  confirmDeleteProfileSchema,
   assignRoleSchema,
   userFilterSchema,
   idParamSchema,
@@ -262,6 +264,153 @@ router.get('/stats',
   authMiddleware.authenticate,
   authMiddleware.requireAdmin,
   userController.getUserStats
+);
+
+/**
+ * @swagger
+ * /api/users/profile:
+ *   put:
+ *     summary: Update authenticated user's profile
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 minLength: 2
+ *                 maxLength: 200
+ *               phone_number:
+ *                 type: string
+ *                 pattern: '^\+\d+$'
+ *                 minLength: 8
+ *                 maxLength: 15
+ *               avatar:
+ *                 type: string
+ *                 format: uri
+ *                 maxLength: 255
+ *                 description: URL del avatar del usuario
+ *                 example: "https://example.com/avatar.jpg"
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.put('/profile',
+  authMiddleware.authenticate,
+  validationMiddleware.validateBody(updateProfileSchema),
+  userController.updateProfile
+);
+
+/**
+ * @swagger
+ * /api/users/profile/delete-request:
+ *   post:
+ *     summary: Request to delete authenticated user's profile (sends confirmation email)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Confirmation email sent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden (admin cannot delete self)
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/profile/delete-request',
+  authMiddleware.authenticate,
+  userController.requestDeleteProfile
+);
+
+/**
+ * @swagger
+ * /api/users/profile/confirm:
+ *   delete:
+ *     summary: Confirm and execute profile deletion with email token, password and confirmation
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *               - password
+ *               - confirmation
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: Confirmation token from email
+ *                 example: "a1b2c3d4e5f6..."
+ *               password:
+ *                 type: string
+ *                 description: Current password for confirmation
+ *                 example: "MySecurePass123"
+ *               confirmation:
+ *                 type: string
+ *                 description: Must be "DELETE" to confirm deletion
+ *                 example: "DELETE"
+ *     responses:
+ *       200:
+ *         description: Profile deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Profile deleted successfully. A confirmation email has been sent."
+ *       400:
+ *         description: Invalid token, password or confirmation
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.delete('/profile/confirm',
+  authMiddleware.authenticate,
+  validationMiddleware.validateBody(confirmDeleteProfileSchema),
+  userController.confirmDeleteProfile
 );
 
 /**

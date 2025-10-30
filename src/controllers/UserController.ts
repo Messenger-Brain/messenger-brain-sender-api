@@ -217,6 +217,154 @@ export class UserController {
   };
 
   /**
+   * Update authenticated user's profile
+   * @route PUT /api/users/profile
+   */
+  public updateProfile = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const authUser = (req as any).user;
+      const userId = authUser?.id;
+
+      if (!userId) {
+        res.status(401).json({ success: false, message: 'Unauthorized' });
+        return;
+      }
+
+      this.logger.info('Profile update attempt', { userId });
+
+      const { email, password, ...body } = req.body as any;
+
+      const result = await this.userService.updateProfile(userId, body);
+
+      if (result.success) {
+        this.loggingMiddleware.logBusinessEvent('profile_updated', {
+          userId,
+          updatedBy: userId,
+          changes: body
+        });
+        res.status(200).json(result);
+      } else {
+        this.logger.warn('Profile update failed', { userId, error: result.error });
+        res.status(400).json(result);
+      }
+    } catch (error) {
+      this.logger.error('Profile update error', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: 'Profile update failed'
+      });
+    }
+  };
+
+  /**
+   * Request to delete authenticated user own profile
+   * @route POST /api/users/profile/delete-request
+   */
+  public requestDeleteProfile = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const authUser = (req as any).user;
+      const userId = authUser?.id;
+
+      if (!userId) {
+        res.status(401).json({ success: false, message: 'Unauthorized' });
+        return;
+      }
+
+      this.logger.info('Profile deletion request', { userId });
+
+      const result = await this.userService.requestDeleteProfile(userId);
+
+      if (result.success) {
+        this.loggingMiddleware.logBusinessEvent('profile_deletion_requested', {
+          user_id: userId
+        });
+        res.status(200).json({
+          success: true,
+          message: result.message
+        });
+      } else {
+        this.logger.warn('Profile deletion request failed', { userId, error: result.error });
+        if (result.message && typeof result.message === 'string' && result.message.toLowerCase().includes('administrador')) {
+          res.status(403).json(result);
+        } else {
+          res.status(400).json(result);
+        }
+      }
+    } catch (error) {
+      this.logger.error('Profile deletion request error', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: 'Profile deletion request failed'
+      });
+    }
+  };
+
+  /**
+   * Confirm and execute profile deletion with token, password and confirmation
+   * @route DELETE /api/users/profile/confirm
+   */
+  public confirmDeleteProfile = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const authUser = (req as any).user;
+      const userId = authUser?.id;
+      const { token, password, confirmation } = req.body;
+
+      if (!userId) {
+        res.status(401).json({ success: false, message: 'Unauthorized' });
+        return;
+      }
+
+      if (!token) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Token is required' 
+        });
+        return;
+      }
+
+      if (!password) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Password is required' 
+        });
+        return;
+      }
+
+      if (!confirmation) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Confirmation is required' 
+        });
+        return;
+      }
+
+      this.logger.info('Profile deletion confirmation attempt', { userId });
+
+      const result = await this.userService.confirmDeleteProfile(userId, token, password, confirmation);
+
+      if (result.success) {
+        this.loggingMiddleware.logBusinessEvent('profile_deleted', {
+          user_id: userId,
+          deletedBy: userId
+        });
+        res.status(200).json(result);
+      } else {
+        this.logger.warn('Profile deletion confirmation failed', { userId, error: result.error });
+        res.status(400).json(result);
+      }
+    } catch (error) {
+      this.logger.error('Profile deletion confirmation error', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: 'Profile deletion confirmation failed'
+      });
+    }
+  };
+
+  /**
    * Delete user
    * @route DELETE /api/users/:id
    */
