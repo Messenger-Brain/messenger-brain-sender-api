@@ -5,6 +5,7 @@ import BrowserContext from "../models/BrowserContext";
 import Message from "../models/Message";
 import { ConfigService } from "../config/ConfigService";
 import Logger from "../utils/logger";
+import crypto from "crypto";
 import { Op, UniqueConstraintError } from "sequelize";
 import {
 	CreateWhatsAppSessionRequest,
@@ -147,16 +148,13 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
 				};
 			}
 
-			// BORRAR Y REEMPLAZAR POR CONFIGURACION REAL!
-			const apiKey = "API KEY PLACEHOLDER";
-			const webhookSecret = "WEBHOOK SECRET PLACEHOLDER";
+			// MOVE THIS MAX ATTEMPTS TO A CONSTANTS FILE!
+			const maxAttempts = 3;
 
 			const statusId =
 				sessionData.statusId ?? (await this.getStatusIdBySlug("need_scan"));
 
-			// Create session
 			const createData: any = {
-				api_key: apiKey,
 				name: sessionData.name,
 				user_id: sessionData.userId,
 				phone_number: sessionData.phoneNumber,
@@ -174,7 +172,46 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
 				createData.browser_context_id = browserContextIdToUse;
 			}
 
-			const session = await WhatsAppSession.create(createData);
+			let session: any = null;
+			//Validates the api_key uniqueness with retries
+
+			for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+				try {
+					createData.api_key = crypto.randomBytes(32).toString("hex");
+					session = await WhatsAppSession.create(createData);
+					break;
+				} catch (err: any) {
+					if (err instanceof UniqueConstraintError) {
+						const fields = err.errors?.map((e: any) => e.path).join(",") || "";
+						if (fields.includes("api_key") && attempt < maxAttempts) {
+							this.logger.warn("api_key collision detected, retrying create", {
+								attempt,
+							});
+							continue;
+						}
+						this.logger.warn(
+							"Unique constraint violation creating WhatsApp session",
+							{ fields, error: err }
+						);
+						return {
+							success: false,
+							message: fields.includes("phone_number")
+								? "Session with this phone number already exists"
+								: "Unique constraint violation",
+							error: "Unique constraint violation",
+						};
+					}
+					throw err;
+				}
+			}
+
+			if (!session) {
+				this.logger.error("Unable to create WhatsApp session after retries");
+				return {
+					success: false,
+					message: "Failed to create WhatsApp session after retries",
+				};
+			}
 
 			// Get session with relations
 			const sessionWithRelations = await this.getSessionById(
@@ -230,16 +267,6 @@ export class WhatsAppSessionService implements WhatsAppSessionServiceInterface {
 		try {
 			const session = await WhatsAppSession.findOne({
 				where: { id: sessionId, user_id: user_id },
-				include: [
-					{
-						model: User,
-						as: "User",
-					},
-					{
-						model: WhatsAppSessionStatus,
-						as: "WhatsAppSessionStatus",
-					},
-				],
 			});
 
 			if (!session) {
