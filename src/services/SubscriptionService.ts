@@ -418,21 +418,25 @@ export class SubscriptionService implements SubscriptionServiceInterface {
         where: { id: userSubscriptionId, user_id: user_id },
         include: [
           {
-            model: User
+            model: User,
+            as: 'User'
           },
           {
             model: Subscription,
             include: [
               {
-                model: SubscriptionStatus
+                model: SubscriptionStatus,
+                as: 'SubscriptionStatus'
               },
               {
-                model: SubscriptionFeature
+                model: SubscriptionFeature,
+                as: 'SubscriptionFeatures'
               }
             ]
           },
           {
-            model: UserSubscriptionStatus
+            model: UserSubscriptionStatus,
+            as: 'UserSubscriptionStatus'
           }
         ]
       });
@@ -475,21 +479,26 @@ export class SubscriptionService implements SubscriptionServiceInterface {
         where: { user_id },
         include: [
           {
-            model: User
+            model: User,
+            as: 'User'
           },
           {
             model: Subscription,
+            as: 'Subscription',
             include: [
               {
-                model: SubscriptionStatus
+                model: SubscriptionStatus,
+                as: 'SubscriptionStatus'
               },
               {
-                model: SubscriptionFeature
+                model: SubscriptionFeature,
+                as: 'SubscriptionFeatures'
               }
             ]
           },
           {
-            model: UserSubscriptionStatus
+            model: UserSubscriptionStatus,
+            as: 'UserSubscriptionStatus'
           }
         ],
         limit,

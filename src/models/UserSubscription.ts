@@ -48,7 +48,7 @@ UserSubscription.init(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: 'users',
+        model: 'User',
         key: 'id',
       },
     },
@@ -56,7 +56,7 @@ UserSubscription.init(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: 'subscriptions',
+        model: 'Subscription',
         key: 'id',
       },
     },
