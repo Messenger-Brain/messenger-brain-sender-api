@@ -240,6 +240,13 @@ export interface UpdateUserSubscriptionRequest {
   statusId?: number;
 }
 
+export interface GetSubscriptionRequestID {
+  subscription_id: number;
+  subscription_slug: string;
+  subscription_status_slug: string;
+  expires_at: Date;
+}
+
 // Preference interfaces
 export interface CreateUserPreferenceRequest {
   userId: number;

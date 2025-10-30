@@ -9,6 +9,7 @@ interface UserSubscriptionAttributes {
   status_id: number;
   created_at?: Date;
   updated_at?: Date;
+  expires_at?: Date;
 }
 
 // UserSubscription creation attributes
@@ -22,6 +23,7 @@ class UserSubscription extends Model<UserSubscriptionAttributes, UserSubscriptio
   public status_id!: number;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
+  public expiresAt!: Date;
 
   // Associations
   public User?: any;
@@ -72,6 +74,11 @@ UserSubscription.init(
       defaultValue: DataTypes.NOW,
     },
     updated_at: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+    expires_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,

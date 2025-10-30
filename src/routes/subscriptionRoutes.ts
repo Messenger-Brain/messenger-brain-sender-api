@@ -64,6 +64,9 @@ const authMiddleware = AuthMiddleware.getInstance();
  *         updatedAt:
  *           type: string
  *           format: date-time
+ *         espiresAt:
+ *           type: string
+ *           format: date-time
  *         subscription:
  *           $ref: '#/components/schemas/Subscription'
  *     CreateSubscriptionRequest:
