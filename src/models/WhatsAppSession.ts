@@ -13,13 +13,18 @@ interface WhatsAppSessionAttributes {
   log_messages: boolean;
   webhook_url?: string;
   webhook_enabled: boolean;
+  webhook_events?: string[];
+  read_incoming_messages: boolean;
+  auto_reject_calls: boolean;
+  api_key: string;
+  webhook_secret: string;
   browser_context_id?: number;
   created_at?: Date;
   updated_at?: Date;
 }
 
 // WhatsAppSession creation attributes
-interface WhatsAppSessionCreationAttributes extends Optional<WhatsAppSessionAttributes, 'id' | 'webhook_url' | 'browser_context_id' | 'created_at' | 'updated_at'> {}
+interface WhatsAppSessionCreationAttributes extends Optional<WhatsAppSessionAttributes, 'id' | 'webhook_url' | 'webhook_events' | 'browser_context_id' | 'created_at' | 'updated_at'> {}
 
 // WhatsAppSession model class
 class WhatsAppSession extends Model<WhatsAppSessionAttributes, WhatsAppSessionCreationAttributes> implements WhatsAppSessionAttributes {
@@ -33,6 +38,11 @@ class WhatsAppSession extends Model<WhatsAppSessionAttributes, WhatsAppSessionCr
   public log_messages!: boolean;
   public webhook_url?: string;
   public webhook_enabled!: boolean;
+  public webhook_events?: string[];
+  public read_incoming_messages!: boolean;
+  public auto_reject_calls!: boolean;
+  public api_key!: string;
+  public webhook_secret!: string;
   public browser_context_id?: number;
   public readonly created_at!: Date;
   public readonly updated_at!: Date;
@@ -119,6 +129,35 @@ WhatsAppSession.init(
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,
+    },
+    webhook_events: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: null,
+      comment: 'Array of webhook events to subscribe to',
+    },
+    read_incoming_messages: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      comment: 'Automatically mark incoming messages as read when received',
+    },
+    auto_reject_calls: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      comment: 'Automatically reject incoming calls',
+    },
+    api_key: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+      unique: true,
+      comment: 'API key for this WhatsApp session - auto-generated on creation',
+    },
+    webhook_secret: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+      comment: 'Secret for webhook validation - auto-generated on creation',
     },
     browser_context_id: {
       type: DataTypes.INTEGER,
