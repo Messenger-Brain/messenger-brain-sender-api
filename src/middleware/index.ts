@@ -18,3 +18,6 @@ export { default as SecurityMiddleware } from './security';
 
 // Re-export types for convenience
 export type { JWTPayload } from '../types';
+
+// WhatsApp Sessions Token middleware
+export { WhatsappSessionsTokenMiddleware } from './whatsappSessionsToken';
