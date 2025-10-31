@@ -20,10 +20,16 @@ import {
   UpdateUserRequestNew,
   FormattedUserResponseUpdated
 } from '../types';
+import UserSubscription from '../models/UserSubscription';
+import Subscription from '../models/Subscription';
+import SubscriptionStatus from '../models/SubscriptionStatus';
+import SubscriptionFeature from '../models/SubscriptionFeature';
+import UserSubscriptionStatus from '../models/UserSubscriptionStatus';
 
 export interface UserServiceInterface {
   createUser(userData: CreateUserRequest): Promise<ApiResponse<FormattedUserResponse>>;
-  getUserById(user_id: number): Promise<ApiResponse<FormattedUserResponse>>;
+  getUserByIdInside(user_id: number): Promise<ApiResponse<FormattedUserResponse>>;
+  getUserById(user_id: number): Promise<ApiResponse<any>>;
   getAllUsers(pagination?: PaginationQuery, filters?: FilterQuery): Promise<ApiResponse<{ users: any[]; pagination: { currentPage: number; totalPages: number; totalItems: number; itemsPerPage: number } }>>;
   updateUser(user_id: number, userData: UpdateUserRequestNew): Promise<ApiResponse<FormattedUserResponseUpdated>>;
   deleteUser(user_id: number): Promise<ApiResponse<void>>;
@@ -175,7 +181,7 @@ export class UserService implements UserServiceInterface {
   /**
    * Get user by ID with relations
    */
-  public async getUserById(user_id: number): Promise<ApiResponse<FormattedUserResponse>> {
+  public async getUserByIdInside(user_id: number): Promise<ApiResponse<FormattedUserResponse>> {
     try {
       const user = await User.findByPk(user_id, {
         include: [
@@ -246,6 +252,89 @@ export class UserService implements UserServiceInterface {
       };
     }
   }
+
+   /**
+   * Get user by ID with relations
+   */
+  public async getUserById(user_id: number): Promise<ApiResponse<any>> {
+    try {
+      const user = await User.findByPk(user_id, {
+        include: [
+          {
+            model: UserStatus,
+            as: 'UserStatus'
+          },
+          {
+            model: Role,
+            as: 'Roles',
+            through: { attributes: [] }
+          }
+        ]
+      });
+
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found'
+        };
+      }
+
+      // Get the user's active subscription
+      const userSubscription = await UserSubscription.findOne({
+        where: { 
+          user_id,
+          user_subscription_status_id: 1 // Assuming 1 is the active status ID
+        },
+        include: [
+          {
+            model: Subscription,
+            as: 'Subscription'
+          }
+        ],
+        order: [['created_at', 'DESC']]
+      });
+
+      // Get role slug
+      let roleSlug = 'user';
+      if (user.Roles && user.Roles.length > 0) {
+        roleSlug = user.Roles[0].slug;
+      }
+
+      // Format the response
+      const formattedResponse = {
+        success: true,
+        data: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone_number || null,
+          role: roleSlug,
+          status: user.UserStatus?.slug || 'active',
+          emailVerified: user.email_verified,
+          lastLogin: null, // This field would need to be added to your user model
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+          subscription: userSubscription ? {
+            planId: userSubscription.Subscription.id,
+            planName: userSubscription.Subscription.slug,
+            status: 'active',
+            expiresAt: userSubscription.expires_at
+          } : null
+        }
+      };
+
+      return formattedResponse;
+
+    } catch (error) {
+      this.logger.error('Failed to get user details', error);
+      return {
+        success: false,
+        message: 'Failed to retrieve user details',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
 
   /**
    * Get all users with pagination and filters
@@ -555,7 +644,7 @@ export class UserService implements UserServiceInterface {
       await user.update(dataToUpdate);
       await this.logUserActivity(user_id, 'profile_updated', `User ${user.name} updated own profile`);
 
-      const updatedUser = await this.getUserById(user_id);
+      const updatedUser = await this.getUserByIdInside(user_id);
 
       return {
         success: true,
@@ -1209,7 +1298,7 @@ export class UserService implements UserServiceInterface {
       const statusText = newStatusId === activeStatusId ? 'activated' : 'deactivated';
       await this.logUserActivity(user_id, 'status_toggled', `User ${statusText}`);
 
-      const updatedUser = await this.getUserById(user_id);
+      const updatedUser = await this.getUserByIdInside(user_id);
 
       return {
         success: true,

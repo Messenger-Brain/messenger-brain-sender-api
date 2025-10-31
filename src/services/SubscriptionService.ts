@@ -370,7 +370,8 @@ export class SubscriptionService implements SubscriptionServiceInterface {
       const existingSubscription = await UserSubscription.findOne({
         where: {
           user_id: userSubscriptionData.userId,
-          status_id: await this.getUserSubscriptionStatusIdBySlug('active')
+          subscription_id: userSubscriptionData.subscriptionId,
+          user_subscription_status_id: await this.getUserSubscriptionStatusIdBySlug('active'),
         }
       });
 
@@ -385,7 +386,7 @@ export class SubscriptionService implements SubscriptionServiceInterface {
       const userSubscription = await UserSubscription.create({
         user_id: userSubscriptionData.userId,
         subscription_id: userSubscriptionData.subscriptionId,
-        status_id: userSubscriptionData.statusId
+        user_subscription_status_id: userSubscriptionData.statusId
       });
 
       // Get user subscription with relations
@@ -641,7 +642,7 @@ export class SubscriptionService implements SubscriptionServiceInterface {
 
       const userSubscription = await UserSubscription.findOne({
         where: { user_id,
-          status_id: activeStatusId
+          user_subscription_status_id: activeStatusId
         },
         include: [
           {
@@ -837,7 +838,7 @@ export class SubscriptionService implements SubscriptionServiceInterface {
 
       const totalUserSubscriptions = await UserSubscription.count();
       const activeUserSubscriptions = await UserSubscription.count({
-        where: { status_id: await this.getUserSubscriptionStatusIdBySlug('active') }
+        where: { user_subscription_status_id: await this.getUserSubscriptionStatusIdBySlug('active') }
       });
 
       const stats = {
@@ -871,7 +872,7 @@ export class SubscriptionService implements SubscriptionServiceInterface {
       const totalUserSubscriptions = await UserSubscription.count({ where: { user_id } });
       const activeUserSubscriptions = await UserSubscription.count({
         where: { user_id,
-          status_id: await this.getUserSubscriptionStatusIdBySlug('active')
+          user_subscription_status_id: await this.getUserSubscriptionStatusIdBySlug('active')
         }
       });
 
