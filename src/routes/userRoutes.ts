@@ -272,17 +272,31 @@ router.get('/stats',
  * /api/users/profile:
  *   get:
  *     summary: Get authenticated user's profile
-  *   get:
- *     summary: Get user by ID
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: number
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 minLength: 2
+ *                 maxLength: 200
+ *               phone_number:
+ *                 type: string
+ *                 pattern: '^\+\d+$'
+ *                 minLength: 8
+ *                 maxLength: 15
+ *               avatar:
+ *                 type: string
+ *                 format: uri
+ *                 maxLength: 255
+ *                 description: URL del avatar del usuario
+ *                 example: "https://example.com/avatar.jpg"
  *     responses:
  *       200:
  *         description: User retrieved successfully
@@ -304,7 +318,7 @@ router.get('/stats',
  */
 router.get('/profile',
   authMiddleware.authenticate,
-  validationMiddleware.validateParams(idParamSchema),
+  validationMiddleware.validateParams(updateProfileSchema),
   userController.getUserProfileAuth
 );
 

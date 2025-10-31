@@ -225,9 +225,13 @@ export class UserController {
   public getUserProfileAuth = async (req: Request, res: Response): Promise<void> => {
     try {
 
+       this.logger.info('Get authenticated user profile request', { req: req.body });
+
       const authUser = (req as any).user;
+      this.logger.info('Get authenticated user profile request', {authUser});  
       const userId = authUser?.id;
-      this.logger.info('Get authenticated user profile request', { userId });
+
+      
     
        if (!userId) {
         res.status(401).json({ success: false, message: 'Unauthorized' });
