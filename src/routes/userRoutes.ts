@@ -78,10 +78,13 @@ const authMiddleware = AuthMiddleware.getInstance();
  *         email:
  *           type: string
  *           format: email
- *         statusId:
- *           type: number
- *         freeTrial:
- *           type: boolean
+ *         phone_number:
+ *           type: string
+ *           minLength: 8
+ *         role:
+ *           type: string
+ *         status:
+ *           type: string
  */
 
 /**

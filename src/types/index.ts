@@ -38,9 +38,19 @@ export interface FormattedUserResponse {
   createdAt: Date;
 }
 
+export interface FormattedUserResponseUpdated {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  role: string;
+  status: string;
+  updatedAt: Date;
+}
+
 export interface ApiResponse<T = any> {
   success: boolean;
-  message: string;
+  message?: string;
   data?: T;
   error?: string;
   details?: any;
@@ -89,6 +99,15 @@ export interface CreateUserRequest {
   statusId: number;
   freeTrial?: boolean;
   email_verified: boolean;
+}
+
+
+export interface UpdateUserRequestNew {
+  name?: string;
+  email?: string;
+  phone_number?: string;
+  role?:string;
+  status?:string
 }
 
 export interface UpdateUserRequest {

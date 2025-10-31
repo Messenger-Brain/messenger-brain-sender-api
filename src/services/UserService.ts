@@ -16,14 +16,16 @@ import {
   FilterQuery,
   ApiResponse,
   PaginatedResponse,
-  FormattedUserResponse
+  FormattedUserResponse,
+  UpdateUserRequestNew,
+  FormattedUserResponseUpdated
 } from '../types';
 
 export interface UserServiceInterface {
   createUser(userData: CreateUserRequest): Promise<ApiResponse<FormattedUserResponse>>;
-  getUserById(user_id: number): Promise<ApiResponse<User>>;
+  getUserById(user_id: number): Promise<ApiResponse<FormattedUserResponse>>;
   getAllUsers(pagination?: PaginationQuery, filters?: FilterQuery): Promise<ApiResponse<{ users: any[]; pagination: { currentPage: number; totalPages: number; totalItems: number; itemsPerPage: number } }>>;
-  updateUser(user_id: number, userData: UpdateUserRequest): Promise<ApiResponse<User>>;
+  updateUser(user_id: number, userData: UpdateUserRequestNew): Promise<ApiResponse<FormattedUserResponseUpdated>>;
   deleteUser(user_id: number): Promise<ApiResponse<void>>;
   requestDeleteProfile(user_id: number): Promise<ApiResponse<{ expiresAt: Date }>>;
   confirmDeleteProfile(user_id: number, token: string, password: string, confirmation: string): Promise<ApiResponse<void>>;
@@ -35,7 +37,7 @@ export interface UserServiceInterface {
   searchUsers(searchTerm: string, pagination?: PaginationQuery): Promise<PaginatedResponse<User>>;
   getUsersByRole(roleSlug: string, pagination?: PaginationQuery): Promise<PaginatedResponse<User>>;
   getUsersByStatus(statusSlug: string, pagination?: PaginationQuery): Promise<PaginatedResponse<User>>;
-  toggleUserStatus(user_id: number): Promise<ApiResponse<User>>;
+  toggleUserStatus(user_id: number): Promise<ApiResponse<FormattedUserResponse>>;
   getUserStats(): Promise<ApiResponse<any>>;
 }
 
@@ -173,16 +175,20 @@ export class UserService implements UserServiceInterface {
   /**
    * Get user by ID with relations
    */
-  public async getUserById(user_id: number): Promise<ApiResponse<User>> {
+  public async getUserById(user_id: number): Promise<ApiResponse<FormattedUserResponse>> {
     try {
       const user = await User.findByPk(user_id, {
         include: [
+          // Include roles via the many-to-many association (User -> Roles through UserRole)
           {
-            model: UserRole,
-            include: [{ model: Role }]
+            model: Role,
+            as: 'Roles',
+            through: { attributes: [] }
           },
+          // Include user status using the alias defined in associations
           {
-            model: UserStatus
+            model: UserStatus,
+            as: 'UserStatus'
           }
         ]
       });
@@ -194,10 +200,41 @@ export class UserService implements UserServiceInterface {
         };
       }
 
+      // Derive role slug from included relations (supports multiple include shapes)
+      let roleSlug = 'user';
+      try {
+        const anyUser: any = user;
+        if (anyUser.UserRoles && anyUser.UserRoles[0] && anyUser.UserRoles[0].Role && anyUser.UserRoles[0].Role.slug) {
+          roleSlug = anyUser.UserRoles[0].Role.slug;
+        } else if (anyUser.Roles && anyUser.Roles[0] && anyUser.Roles[0].slug) {
+          roleSlug = anyUser.Roles[0].slug;
+        }
+      } catch (err) {
+        this.logger.warn('Failed to determine role slug for getUserById response', err);
+      }
+
+      // Derive status slug from included UserStatus
+      const anyUser: any = user;
+      const statusSlug = anyUser.UserStatus && anyUser.UserStatus.slug ? anyUser.UserStatus.slug : 'active';
+
+      // Normalize phone
+      const phone = anyUser.phone_number ? (typeof anyUser.phone_number === 'number' ? `+${anyUser.phone_number}` : anyUser.phone_number) : null;
+
+      const responseData: FormattedUserResponse = {
+        id: anyUser.id,
+        name: anyUser.name,
+        email: anyUser.email,
+        phone: phone,
+        role: roleSlug,
+        status: statusSlug,
+        emailVerified: typeof anyUser.email_verified === 'boolean' ? anyUser.email_verified : false,
+        createdAt: anyUser.createdAt
+      };
+
       return {
         success: true,
         message: 'User retrieved successfully',
-        data: user
+        data: responseData
       };
 
     } catch (error) {
@@ -361,7 +398,7 @@ export class UserService implements UserServiceInterface {
   /**
    * Update user
    */
-  public async updateUser(user_id: number, userData: UpdateUserRequest): Promise<ApiResponse<User>> {
+  public async updateUser(user_id: number, userData: UpdateUserRequestNew): Promise<ApiResponse<FormattedUserResponseUpdated>> {
     try {
       this.logger.info('Updating user', { user_id });
 
@@ -373,24 +410,113 @@ export class UserService implements UserServiceInterface {
         };
       }
 
-      // Update user
-      await user.update(userData);
+      // If email is being changed, check for uniqueness (skip empty strings)
+      if (userData.email && userData.email.trim() !== '' && userData.email !== user.email) {
+        const existingUser = await User.findOne({ where: { email: userData.email } });
+        if (existingUser) {
+          return {
+            success: false,
+            message: 'User with this email already exists'
+          };
+        }
+      }
 
-      // Update role if provided
-      if (userData.roleId) {
-        await UserRole.destroy({ where: { user_id } });
-        await UserRole.create({ user_id, role_id: userData.roleId });
+      // Prepare update payload - only include non-empty values
+      const updatePayload: any = {};
+
+      if (userData.name !== undefined && userData.name !== null && userData.name.trim() !== '') {
+        updatePayload.name = userData.name;
+      }
+      if (userData.email !== undefined && userData.email !== null && userData.email.trim() !== '') {
+        updatePayload.email = userData.email;
+      }
+      if (userData.phone_number !== undefined && userData.phone_number !== null && userData.phone_number.trim() !== '') {
+        updatePayload.phone_number = userData.phone_number ?? "+0000000000";
+      }
+
+      // Status: handle status slug by converting to status_id (skip empty strings)
+      if (userData.status !== undefined && userData.status !== null && userData.status.trim() !== '') {
+        const statusId = await this.getStatusIdBySlug(userData.status);
+        if (statusId) {
+          updatePayload.status_id = statusId;
+        } else {
+          this.logger.warn('Invalid status slug provided', { status: userData.status });
+        }
+      }
+
+      // Apply updates to user record if there's anything to update
+      if (Object.keys(updatePayload).length > 0) {
+        await user.update(updatePayload);
+      }
+
+      // Role handling: convert role slug to roleId and update (skip empty strings)
+      if (userData.role !== undefined && userData.role !== null && userData.role.trim() !== '') {
+        const roleIdToSet = await this.getRoleIdBySlug(userData.role);
+        if (roleIdToSet) {
+          // Replace existing roles with the new one
+          await UserRole.destroy({ where: { user_id } });
+          await UserRole.create({ user_id, role_id: roleIdToSet });
+        } else {
+          this.logger.warn('Invalid role slug provided', { role: userData.role });
+        }
       }
 
       // Log activity
       await this.logUserActivity(user_id, 'user_updated', `User ${user.name} was updated`);
 
-      const updatedUser = await this.getUserById(user_id);
-      
+      // Fetch fresh user data with relations
+      const updatedUser = await User.findByPk(user_id, {
+        include: [
+          {
+            model: Role,
+            as: 'Roles',
+            through: { attributes: [] }
+          },
+          {
+            model: UserStatus,
+            as: 'UserStatus'
+          }
+        ]
+      });
+
+      if (!updatedUser) {
+        return {
+          success: false,
+          message: 'User not found after update'
+        };
+      }
+
+      // Derive role slug
+      let roleSlug = 'user';
+      try {
+        const anyUser: any = updatedUser;
+        if (anyUser.Roles && anyUser.Roles[0] && anyUser.Roles[0].slug) {
+          roleSlug = anyUser.Roles[0].slug;
+        }
+      } catch (err) {
+        this.logger.warn('Failed to determine role slug for update response', err);
+      }
+
+      // Derive status slug
+      const anyUser: any = updatedUser;
+      const statusSlug = anyUser.UserStatus && anyUser.UserStatus.slug ? anyUser.UserStatus.slug : 'active';
+
+      // Normalize phone
+      const phone = anyUser.phone_number ? (typeof anyUser.phone_number === 'number' ? `+${anyUser.phone_number}` : anyUser.phone_number) : null;
+
+      const responseData: FormattedUserResponseUpdated = {
+        id: anyUser.id,
+        name: anyUser.name,
+        email: anyUser.email,
+        phone: phone,
+        role: roleSlug,
+        status: statusSlug,
+        updatedAt: anyUser.updatedAt
+      };
+
       return {
         success: true,
-        message: 'User updated successfully',
-        data: updatedUser.data!
+        data: responseData
       };
 
     } catch (error) {
@@ -406,7 +532,7 @@ export class UserService implements UserServiceInterface {
   /**
    * Update authenticated user's own profile
    */
-  public async updateProfile(user_id: number, profileData: Partial<{ name: string; phone_number: string }>): Promise<ApiResponse<User>> {
+  public async updateProfile(user_id: number, profileData: Partial<{ name: string; phone_number: string }>): Promise<ApiResponse<FormattedUserResponse>> {
     try {
       this.logger.info('Updating user profile', { user_id });
 
@@ -1055,7 +1181,7 @@ export class UserService implements UserServiceInterface {
   /**
    * Toggle user status (active/inactive)
    */
-  public async toggleUserStatus(user_id: number): Promise<ApiResponse<User>> {
+  public async toggleUserStatus(user_id: number): Promise<ApiResponse<FormattedUserResponse>> {
     try {
       const user = await User.findByPk(user_id);
       if (!user) {

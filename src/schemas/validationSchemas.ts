@@ -51,16 +51,16 @@ export const createUserSchema = Joi.object({
 });
 
 export const updateUserSchema = Joi.object({
-  name: Joi.string().min(2).max(200).optional(),
-  email: Joi.string().email().optional(),
+  name: Joi.string().allow('', null).min(2).max(200).optional(),
+  email: Joi.string().allow('', null).email().optional(),
   phone_number: Joi.string().allow('', null).pattern(/^\+\d+$/).min(8).max(15).optional().messages({
     'string.pattern.base': 'Phone number must start with + and contain only digits',
     'string.min': 'Phone number must be at least {#limit} characters',
     'string.max': 'Phone number must be at most {#limit} characters'
   }),
-  statusId: Joi.number().integer().positive().optional(),
-  freeTrial: Joi.boolean().optional()
-});
+  role: Joi.string().allow('', null).valid('admin', 'user', 'moderator').optional(),
+  status: Joi.string().allow('', null).valid('active', 'inactive', 'suspended').optional()
+}).min(1);
 
 // Profile update schema (for authenticated user updating own profile)
 export const updateProfileSchema = Joi.object({
