@@ -22,6 +22,8 @@ import Message from './Message';
 import MessageStatus from './MessageStatus';
 import SendMessageJob from './SendMessageJob';
 import SendMessageJobStatus from './SendMessageJobStatus';
+import FetchContactsJob from './FetchContactsJob';
+import FetchContactsJobStatus from './FetchContactsJobStatus';
 import SystemError from './SystemError';
 
 /**
@@ -215,6 +217,17 @@ export function setupAssociations(): void {
   SendMessageJobStatus.hasMany(SendMessageJob, {
     foreignKey: 'send_messages_jobs_status_id',
     as: 'SendMessageJobs',
+  });
+
+  // FetchContactsJob associations
+  FetchContactsJob.belongsTo(FetchContactsJobStatus, {
+    foreignKey: 'fetch_contacts_jobs_status_id',
+    as: 'FetchContactsJobStatus',
+  });
+
+  FetchContactsJob.hasMany(FetchContactsJob, {
+    foreignKey: 'fetch_contacts_jobs_status_id',
+    as: 'FetchContactsJob',
   });
 
   console.log('✅ All model associations configured successfully');

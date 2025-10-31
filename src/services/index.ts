@@ -9,4 +9,8 @@ export { RedisService } from './RedisService';
 export { MessageQueueService } from './MessageQueueService';
 export { BrowserContextService } from './BrowserContextService';
 export { WhatsAppMessageSenderService } from './WhatsAppMessageSenderService';
-
+// ----- CONTACTS ----- //
+export { WhatsAppContactsFetcherService } from './WhatsAppContactsFetcherService';
+export { PuppeteerWhatsappContactsService } from './PuppeteerWhatsappContactsService'
+export { ContactsQueueService } from './ContactsQueueService'
+export { FetchContactsJobService } from './FetchContactsJobService'
