@@ -1,4 +1,4 @@
-import { Request } from 'express';
+import { Request } from "express";
 
 // Express Request extension for user authentication
 declare global {
@@ -27,9 +27,30 @@ export type AuthenticatedRequest = Request & {
 };
 
 // Common API Response types
+export interface FormattedUserResponse {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  role: string;
+  status: string;
+  emailVerified: boolean;
+  createdAt: Date;
+}
+
+export interface FormattedUserResponseUpdated {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  role: string;
+  status: string;
+  updatedAt: Date;
+}
+
 export interface ApiResponse<T = any> {
   success: boolean;
-  message: string;
+  message?: string;
   data?: T;
   error?: string;
   details?: any;
@@ -72,18 +93,32 @@ export interface CreateUserRequest {
   name: string;
   email: string;
   password: string;
+  phone_number: string;
+  role:string;
   roleId: number;
   statusId: number;
   freeTrial?: boolean;
+  email_verified: boolean;
+}
+
+
+export interface UpdateUserRequestNew {
+  name?: string;
+  email?: string;
+  phone_number?: string;
+  role?:string;
+  status?:string
 }
 
 export interface UpdateUserRequest {
   name?: string;
   email?: string;
   password?: string;
+  phone_number?: string;
   roleId?: number;
   statusId?: number;
   freeTrial?: boolean;
+  email_verified?: boolean;
 }
 
 export interface LoginRequest {
@@ -99,9 +134,11 @@ export interface AuthResponse {
       id: number;
       name: string;
       email: string;
+      phone_number: string;
       role: string;
       status: string;
       free_trial: boolean;
+      email_verified: boolean;
     };
     token: string;
     refreshToken?: string;
@@ -114,7 +151,7 @@ export interface PaginationQuery {
   page?: number;
   limit?: number;
   sortBy?: string;
-  sortOrder?: 'ASC' | 'DESC';
+  sortOrder?: "ASC" | "DESC";
 }
 
 export interface FilterQuery {
@@ -141,12 +178,16 @@ export interface CreateWhatsAppSessionRequest {
 }
 
 export interface UpdateWhatsAppSessionRequest {
+  name?: string;
   phoneNumber?: string;
   statusId?: number;
   accountProtection?: boolean;
   logMessages?: boolean;
   webhookUrl?: string;
   webhookEnabled?: boolean;
+  webhookEvents?: string[];
+  readIncomingMessages?: boolean;
+  autoRejectCalls?: boolean;
   browserContextId?: number;
 }
 
@@ -175,6 +216,22 @@ export interface CreateSendMessageJobRequest {
 export interface UpdateSendMessageJobRequest {
   statusId?: number;
   log?: any;
+}
+
+export interface CreateFetchContactsJobRequest {
+  whatsapp_session_id: number;
+  browser_context_id: number;
+  log?: any;
+}
+
+export interface UpdateFetchContactsJobRequest {
+  statusId?: number;
+  log?: any;
+}
+
+export interface ContactsJobData {
+  browser_context_id: number;
+  fetch_contacts_job_id?: number;
 }
 
 // Subscription interfaces

@@ -11,6 +11,7 @@ import Logger from './utils/logger';
 import { BrowserContextService } from './services/BrowserContextService';
 import { RedisService } from './services/RedisService';
 import { WhatsAppMessageSenderService } from './services/WhatsAppMessageSenderService';
+import { WhatsAppContactsFetcherService } from './services';
 
 export class App {
   public app: Application;
@@ -141,6 +142,10 @@ export class App {
       // Initialize WhatsApp message sender service (this starts the workers)
       WhatsAppMessageSenderService.getInstance();
       Logger.info('WhatsApp message sender service initialized successfully');
+
+  
+      WhatsAppContactsFetcherService.getInstance();
+      Logger.info('WhatsApp fetcher contacts service initialized successfully');
 
     } catch (error) {
       Logger.error('Failed to initialize application', error);

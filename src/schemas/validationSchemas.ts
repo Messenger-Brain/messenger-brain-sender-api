@@ -10,6 +10,7 @@ export const registerSchema = Joi.object({
   name: Joi.string().min(2).max(200).required(),
   email: Joi.string().email().required(),
   password: Joi.string().min(6).required(),
+  role: Joi.string().valid('admin', 'user', 'moderator').optional(),
   roleId: Joi.number().integer().min(1).optional(),
   statusId: Joi.number().integer().min(1).optional(),
   freeTrial: Joi.boolean().optional()
@@ -38,16 +39,58 @@ export const refreshTokenSchema = Joi.object({
 export const createUserSchema = Joi.object({
   name: Joi.string().min(2).max(200).required(),
   email: Joi.string().email().required(),
-  password: Joi.string().min(6).required(),
-  roleId: Joi.number().integer().positive().required(),
-  statusId: Joi.number().integer().positive().required()
+  password: Joi.string().min(8).required(),
+  phone_number: Joi.string().allow('', null).pattern(/^\+\d+$/).min(8).max(15).optional().messages({
+    'string.pattern.base': 'Phone number must start with + and contain only digits',
+    'string.min': 'Phone number must be at least {8} characters',
+    'string.max': 'Phone number must be at most {#15} characters'
+  }),
+  role: Joi.string().allow('').valid('admin', 'user', 'moderator').optional(),
+  roleId: Joi.number().integer().allow(null).positive().optional(),
+  statusId: Joi.number().integer().allow(null).positive().optional()
 });
 
 export const updateUserSchema = Joi.object({
+  name: Joi.string().allow('', null).min(2).max(200).optional(),
+  email: Joi.string().allow('', null).email().optional(),
+  phone_number: Joi.string().allow('', null).pattern(/^\+\d+$/).min(8).max(15).optional().messages({
+    'string.pattern.base': 'Phone number must start with + and contain only digits',
+    'string.min': 'Phone number must be at least {#limit} characters',
+    'string.max': 'Phone number must be at most {#limit} characters'
+  }),
+  role: Joi.string().allow('', null).valid('admin', 'user', 'moderator').optional(),
+  status: Joi.string().allow('', null).valid('active', 'inactive', 'suspended').optional()
+}).min(1);
+
+// Profile update schema (for authenticated user updating own profile)
+export const updateProfileSchema = Joi.object({
   name: Joi.string().min(2).max(200).optional(),
-  email: Joi.string().email().optional(),
-  statusId: Joi.number().integer().positive().optional(),
-  freeTrial: Joi.boolean().optional()
+  phone_number: Joi.string().allow('', null).pattern(/^\+\d+$/).min(8).max(15).optional().messages({
+    'string.pattern.base': 'Phone number must start with + and contain only digits',
+    'string.min': 'Phone number must be at least {#limit} characters',
+    'string.max': 'Phone number must be at most {#limit} characters'
+  }),
+  avatar: Joi.string().uri().max(255).allow('', null).optional().messages({
+    'string.uri': 'Avatar must be a valid URL',
+    'string.max': 'Avatar URL must be at most {#limit} characters'
+  })
+});
+
+// Confirm delete profile schema (with token from email)
+export const confirmDeleteProfileSchema = Joi.object({
+  token: Joi.string().required().messages({
+    'string.empty': 'Token is required',
+    'any.required': 'Token is required'
+  }),
+  password: Joi.string().required().messages({
+    'string.empty': 'Password is required',
+    'any.required': 'Password is required'
+  }),
+  confirmation: Joi.string().valid('DELETE').required().messages({
+    'any.only': 'Confirmation must be "DELETE"',
+    'string.empty': 'Confirmation is required',
+    'any.required': 'Confirmation is required'
+  })
 });
 
 export const assignRoleSchema = Joi.object({
@@ -138,6 +181,14 @@ export const createSendMessageJobSchema = Joi.object({
   priority: Joi.number().integer().min(1).max(10).default(5)
 });
 
+// Fetch Contacts Job schemas
+export const createFetchContactsJobSchema = Joi.object({
+  whatsapp_session_id: Joi.number().integer().positive().required(),
+  delay: Joi.number().integer().min(1000).max(60000).default(2000),
+  priority: Joi.number().integer().min(1).max(10).default(5)
+});
+
+
 // User Preference schemas
 export const createUserPreferenceSchema = Joi.object({
   systemPreferenceId: Joi.number().integer().positive().required(),
@@ -174,9 +225,11 @@ export const userFilterSchema = Joi.object({
   limit: Joi.number().integer().min(1).max(100).default(10),
   search: Joi.string().max(200).optional(),
   roleId: Joi.number().integer().positive().optional(),
+  role: Joi.string().valid('admin', 'user', 'moderator').optional(),
+  status: Joi.string().valid('active', 'inactive', 'suspended').optional(),
   statusId: Joi.number().integer().positive().optional(),
   freeTrial: Joi.boolean().optional(),
-  sortBy: Joi.string().max(50).optional(),
+  sortBy: Joi.string().valid('createdAt', 'name', 'email').max(50).optional(),
   sortOrder: Joi.string().valid('ASC', 'DESC').default('DESC')
 });
 

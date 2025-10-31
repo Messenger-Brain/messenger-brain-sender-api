@@ -22,6 +22,14 @@ module.exports = {
         type: Sequelize.STRING(200),
         allowNull: false
       },
+      phone_number: {
+        type: Sequelize.STRING(15),
+        allowNull: true
+      },
+      avatar: {
+        type: Sequelize.STRING(255),
+        allowNull: true
+      },
       status_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
@@ -33,6 +41,11 @@ module.exports = {
         onDelete: 'RESTRICT'
       },
       free_trial: {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: true
+      },
+      email_verified: {
         type: Sequelize.BOOLEAN,
         allowNull: false,
         defaultValue: true

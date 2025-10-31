@@ -3,24 +3,32 @@ import UserRole from '../models/UserRole';
 import Role from '../models/Role';
 import UserStatus from '../models/UserStatus';
 import UserActivity from '../models/UserActivity';
+import Token from '../models/Token';
+import TokenType from '../models/TokenType';
 import { ConfigService } from '../config/ConfigService';
 import Logger from '../utils/logger';
 import { Op } from 'sequelize';
+import crypto from 'crypto';
 import { 
   CreateUserRequest, 
   UpdateUserRequest, 
   PaginationQuery,
   FilterQuery,
   ApiResponse,
-  PaginatedResponse 
+  PaginatedResponse,
+  FormattedUserResponse,
+  UpdateUserRequestNew,
+  FormattedUserResponseUpdated
 } from '../types';
 
 export interface UserServiceInterface {
-  createUser(userData: CreateUserRequest): Promise<ApiResponse<User>>;
-  getUserById(user_id: number): Promise<ApiResponse<User>>;
-  getAllUsers(pagination?: PaginationQuery, filters?: FilterQuery): Promise<PaginatedResponse<User>>;
-  updateUser(user_id: number, userData: UpdateUserRequest): Promise<ApiResponse<User>>;
+  createUser(userData: CreateUserRequest): Promise<ApiResponse<FormattedUserResponse>>;
+  getUserById(user_id: number): Promise<ApiResponse<FormattedUserResponse>>;
+  getAllUsers(pagination?: PaginationQuery, filters?: FilterQuery): Promise<ApiResponse<{ users: any[]; pagination: { currentPage: number; totalPages: number; totalItems: number; itemsPerPage: number } }>>;
+  updateUser(user_id: number, userData: UpdateUserRequestNew): Promise<ApiResponse<FormattedUserResponseUpdated>>;
   deleteUser(user_id: number): Promise<ApiResponse<void>>;
+  requestDeleteProfile(user_id: number): Promise<ApiResponse<{ expiresAt: Date }>>;
+  confirmDeleteProfile(user_id: number, token: string, password: string, confirmation: string): Promise<ApiResponse<void>>;
   getUserRoles(user_id: number): Promise<ApiResponse<Role[]>>;
   assignRole(user_id: number, role_id: number): Promise<ApiResponse<void>>;
   removeRole(user_id: number, role_id: number): Promise<ApiResponse<void>>;
@@ -29,7 +37,7 @@ export interface UserServiceInterface {
   searchUsers(searchTerm: string, pagination?: PaginationQuery): Promise<PaginatedResponse<User>>;
   getUsersByRole(roleSlug: string, pagination?: PaginationQuery): Promise<PaginatedResponse<User>>;
   getUsersByStatus(statusSlug: string, pagination?: PaginationQuery): Promise<PaginatedResponse<User>>;
-  toggleUserStatus(user_id: number): Promise<ApiResponse<User>>;
+  toggleUserStatus(user_id: number): Promise<ApiResponse<FormattedUserResponse>>;
   getUserStats(): Promise<ApiResponse<any>>;
 }
 
@@ -53,7 +61,7 @@ export class UserService implements UserServiceInterface {
   /**
    * Create a new user
    */
-  public async createUser(userData: CreateUserRequest): Promise<ApiResponse<User>> {
+  public async createUser(userData: CreateUserRequest): Promise<ApiResponse<FormattedUserResponse>> {
     try {
       this.logger.info('Creating new user', { email: userData.email });
 
@@ -62,6 +70,8 @@ export class UserService implements UserServiceInterface {
         where: { email: userData.email }
       });
 
+      
+
       if (existingUser) {
         return {
           success: false,
@@ -69,20 +79,49 @@ export class UserService implements UserServiceInterface {
         };
       }
 
+      const passwordValidation = this.validatePassword(userData.password);
+      if (!passwordValidation.isValid) {
+        this.logger.warn('Password validation failed', { errors: passwordValidation.errors });
+        return {
+          success: false,
+          message: 'Invalid password format',
+          error: passwordValidation.errors.join(', ')
+        };
+      }
+
+      
+      const hashedPassword = await User.hashPassword(userData.password);
+
+      var existingRole = await this.getRoleIdBySlug(userData.role);
+      var roleIdFound = existingRole;
+      
+      if (existingRole == null) {
+        roleIdFound = await this.getRoleIdBySlug("user");
+      }
+
+      
+
+      const defaultStatus = await UserStatus.findOne({ where: { slug: 'active' } });
+      const defaultStatusId = defaultStatus ? defaultStatus.id : 1;
+
       // Create user
       const user = await User.create({
         name: userData.name,
         email: userData.email,
-        password: userData.password,
-        status_id: userData.statusId,
-        free_trial: userData.freeTrial ?? false
+        password: hashedPassword,
+        phone_number: userData.phone_number ??"+0000000000",
+        status_id: defaultStatusId, // Default to 'active' status (fallback to 1 if not found)
+        free_trial: userData.freeTrial ?? true,
+        email_verified: false
       });
 
+      this.logger.info('User created successfully', { user: user});
+
       // Assign role if provided
-      if (userData.roleId) {
+      if (roleIdFound) {
         await UserRole.create({
           user_id: user.id,
-          role_id: userData.roleId
+          role_id: roleIdFound
         });
       }
 
@@ -91,10 +130,36 @@ export class UserService implements UserServiceInterface {
 
       this.logger.info('User created successfully', { user_id: user.id });
 
+      // Determine role slug for response (fallback to 'user')
+      let roleSlug = 'user';
+      try {
+        if (roleIdFound) {
+          const roleObj = await Role.findByPk(roleIdFound);
+          if (roleObj && roleObj.slug) roleSlug = roleObj.slug;
+        }
+      } catch (err) {
+        this.logger.warn('Failed to determine role slug for response', err);
+      }
+
+      // Determine status slug for response (use defaultStatus if available)
+      const statusSlug = defaultStatus && defaultStatus.slug ? defaultStatus.slug : 'active';
+
+      // Build formatted response object
+      const responseData: FormattedUserResponse = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone_number && user.phone_number !== '' ? user.phone_number : null,
+        role: roleSlug,
+        status: statusSlug,
+        emailVerified: typeof user.email_verified === 'boolean' ? user.email_verified : false,
+        createdAt: user.createdAt
+      };
+
       return {
         success: true,
         message: 'User created successfully',
-        data: user
+        data: responseData
       };
 
     } catch (error) {
@@ -110,16 +175,20 @@ export class UserService implements UserServiceInterface {
   /**
    * Get user by ID with relations
    */
-  public async getUserById(user_id: number): Promise<ApiResponse<User>> {
+  public async getUserById(user_id: number): Promise<ApiResponse<FormattedUserResponse>> {
     try {
       const user = await User.findByPk(user_id, {
         include: [
+          // Include roles via the many-to-many association (User -> Roles through UserRole)
           {
-            model: UserRole,
-            include: [{ model: Role }]
+            model: Role,
+            as: 'Roles',
+            through: { attributes: [] }
           },
+          // Include user status using the alias defined in associations
           {
-            model: UserStatus
+            model: UserStatus,
+            as: 'UserStatus'
           }
         ]
       });
@@ -131,10 +200,41 @@ export class UserService implements UserServiceInterface {
         };
       }
 
+      // Derive role slug from included relations (supports multiple include shapes)
+      let roleSlug = 'user';
+      try {
+        const anyUser: any = user;
+        if (anyUser.UserRoles && anyUser.UserRoles[0] && anyUser.UserRoles[0].Role && anyUser.UserRoles[0].Role.slug) {
+          roleSlug = anyUser.UserRoles[0].Role.slug;
+        } else if (anyUser.Roles && anyUser.Roles[0] && anyUser.Roles[0].slug) {
+          roleSlug = anyUser.Roles[0].slug;
+        }
+      } catch (err) {
+        this.logger.warn('Failed to determine role slug for getUserById response', err);
+      }
+
+      // Derive status slug from included UserStatus
+      const anyUser: any = user;
+      const statusSlug = anyUser.UserStatus && anyUser.UserStatus.slug ? anyUser.UserStatus.slug : 'active';
+
+      // Normalize phone
+      const phone = anyUser.phone_number ? (typeof anyUser.phone_number === 'number' ? `+${anyUser.phone_number}` : anyUser.phone_number) : null;
+
+      const responseData: FormattedUserResponse = {
+        id: anyUser.id,
+        name: anyUser.name,
+        email: anyUser.email,
+        phone: phone,
+        role: roleSlug,
+        status: statusSlug,
+        emailVerified: typeof anyUser.email_verified === 'boolean' ? anyUser.email_verified : false,
+        createdAt: anyUser.createdAt
+      };
+
       return {
         success: true,
         message: 'User retrieved successfully',
-        data: user
+        data: responseData
       };
 
     } catch (error) {
@@ -150,13 +250,28 @@ export class UserService implements UserServiceInterface {
   /**
    * Get all users with pagination and filters
    */
-  public async getAllUsers(pagination: PaginationQuery = {}, filters: FilterQuery = {}): Promise<PaginatedResponse<User>> {
+  public async getAllUsers(pagination: PaginationQuery = {}, filters: FilterQuery = {}): Promise<ApiResponse<{ users: any[]; pagination: { currentPage: number; totalPages: number; totalItems: number; itemsPerPage: number } }>> {
     try {
       const page = pagination.page || 1;
       const limit = pagination.limit || 10;
       const offset = (page - 1) * limit;
-      const sortBy = pagination.sortBy || 'created_at';
-      const sortOrder = pagination.sortOrder || 'DESC';
+      // Normalize sortBy values from the API to actual DB columns.
+      // Acceptable inputs: 'createdAt', 'created_at', 'name', 'email' (case-insensitive)
+      const rawSort = (pagination.sortBy || 'createdAt').toString();
+      const sortOrder = (pagination.sortOrder || 'DESC') as 'ASC' | 'DESC';
+
+      let sortBy: string;
+      const rawLower = rawSort.toLowerCase();
+      if (rawLower === 'createdat' || rawLower === 'created_at') {
+        sortBy = 'created_at';
+      } else if (rawLower === 'name') {
+        sortBy = 'name';
+      } else if (rawLower === 'email') {
+        sortBy = 'email';
+      } else {
+        // Fallback to created_at if unknown
+        sortBy = 'created_at';
+      }
 
       // Build where clause
       const whereClause: any = {};
@@ -164,23 +279,55 @@ export class UserService implements UserServiceInterface {
       if (filters.search) {
         whereClause[Op.or] = [
           { name: { [Op.like]: `%${filters.search}%` } },
-          { email: { [Op.like]: `%${filters.search}%` } }
+          { email: { [Op.like]: `%${filters.search}%` } },
+          { phone_number: { [Op.like]: `%${filters.search}%` } }
         ];
       }
 
       if (filters.status) {
-        whereClause.status_id = await this.getStatusIdBySlug(filters.status);
+        // Convert status slug to id; if not found, return a clear error immediately
+        const statusId = await this.getStatusIdBySlug(filters.status);
+        if (!statusId) {
+          return {
+            success: false,
+            message: 'Failed to retrieve users',
+            error: `No users found with status '${filters.status}'`,
+            data: {
+              users: [],
+              pagination: {
+                currentPage: page,
+                totalPages: 0,
+                totalItems: 0,
+                itemsPerPage: limit
+              }
+            }
+          };
+        }
+
+        whereClause.status_id = statusId;
+      } else if ((filters as any).status_id) {
+        // Accept numeric status_id as fallback
+        whereClause.status_id = (filters as any).status_id;
+      }
+
+      // Build role filter if provided. When a role filter is present we make the include required
+      // so Sequelize performs an inner join and only returns users that have that role.
+      const roleInclude: any = {
+        model: Role,
+        as: 'Roles',
+        through: { attributes: [] },
+        required: !!filters.role
+      };
+
+      if (filters.role) {
+        roleInclude.where = { slug: filters.role };
       }
 
       // Get users with pagination
       const { count, rows } = await User.findAndCountAll({
         where: whereClause,
         include: [
-          {
-            model: Role,
-            as: 'Roles',
-            through: { attributes: [] }
-          },
+          roleInclude,
           {
             model: UserStatus,
             as: 'UserStatus'
@@ -193,15 +340,39 @@ export class UserService implements UserServiceInterface {
 
       const totalPages = Math.ceil(count / limit);
 
+      // If a search/role/status filter was provided and there are no matches, return a specific error
+      if ((filters.search || filters.role || filters.status) && count === 0) {
+        let errorMessage = 'No users found matching the provided filter(s)';
+        if (filters.role) errorMessage = `No users found with role '${filters.role}'`;
+        else if (filters.status) errorMessage = `No users found with status '${filters.status}'`;
+        else if (filters.search) errorMessage = 'No users found matching search criteria';
+        throw new Error(errorMessage);
+      }
+
+      // Map DB rows to the public API shape
+      const users = rows.map((u: any) => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        phone: u.phone_number ? (typeof u.phone_number === 'number' ? `+${u.phone_number}` : u.phone_number) : null,
+        role: u.Roles && u.Roles[0] ? u.Roles[0].slug : 'user',
+        status: u.UserStatus ? u.UserStatus.slug : null,
+        emailVerified: typeof u.email_verified === 'boolean' ? u.email_verified : true,
+        createdAt: u.createdAt,
+        updatedAt: u.updatedAt
+      }));
+
       return {
         success: true,
         message: 'Users retrieved successfully',
-        data: rows,
-        pagination: {
-          page,
-          limit,
-          total: count,
-          totalPages
+        data: {
+          users,
+          pagination: {
+            currentPage: page,
+            totalPages,
+            totalItems: count,
+            itemsPerPage: limit
+          }
         }
       };
 
@@ -211,12 +382,14 @@ export class UserService implements UserServiceInterface {
         success: false,
         message: 'Failed to retrieve users',
         error: error instanceof Error ? error.message : 'Unknown error',
-        data: [],
-        pagination: {
-          page: 1,
-          limit: 10,
-          total: 0,
-          totalPages: 0
+        data: {
+          users: [],
+          pagination: {
+            currentPage: 1,
+            totalPages: 0,
+            totalItems: 0,
+            itemsPerPage: 10
+          }
         }
       };
     }
@@ -225,7 +398,7 @@ export class UserService implements UserServiceInterface {
   /**
    * Update user
    */
-  public async updateUser(user_id: number, userData: UpdateUserRequest): Promise<ApiResponse<User>> {
+  public async updateUser(user_id: number, userData: UpdateUserRequestNew): Promise<ApiResponse<FormattedUserResponseUpdated>> {
     try {
       this.logger.info('Updating user', { user_id });
 
@@ -237,24 +410,113 @@ export class UserService implements UserServiceInterface {
         };
       }
 
-      // Update user
-      await user.update(userData);
+      // If email is being changed, check for uniqueness (skip empty strings)
+      if (userData.email && userData.email.trim() !== '' && userData.email !== user.email) {
+        const existingUser = await User.findOne({ where: { email: userData.email } });
+        if (existingUser) {
+          return {
+            success: false,
+            message: 'User with this email already exists'
+          };
+        }
+      }
 
-      // Update role if provided
-      if (userData.roleId) {
-        await UserRole.destroy({ where: { user_id } });
-        await UserRole.create({ user_id, role_id: userData.roleId });
+      // Prepare update payload - only include non-empty values
+      const updatePayload: any = {};
+
+      if (userData.name !== undefined && userData.name !== null && userData.name.trim() !== '') {
+        updatePayload.name = userData.name;
+      }
+      if (userData.email !== undefined && userData.email !== null && userData.email.trim() !== '') {
+        updatePayload.email = userData.email;
+      }
+      if (userData.phone_number !== undefined && userData.phone_number !== null && userData.phone_number.trim() !== '') {
+        updatePayload.phone_number = userData.phone_number ?? "+0000000000";
+      }
+
+      // Status: handle status slug by converting to status_id (skip empty strings)
+      if (userData.status !== undefined && userData.status !== null && userData.status.trim() !== '') {
+        const statusId = await this.getStatusIdBySlug(userData.status);
+        if (statusId) {
+          updatePayload.status_id = statusId;
+        } else {
+          this.logger.warn('Invalid status slug provided', { status: userData.status });
+        }
+      }
+
+      // Apply updates to user record if there's anything to update
+      if (Object.keys(updatePayload).length > 0) {
+        await user.update(updatePayload);
+      }
+
+      // Role handling: convert role slug to roleId and update (skip empty strings)
+      if (userData.role !== undefined && userData.role !== null && userData.role.trim() !== '') {
+        const roleIdToSet = await this.getRoleIdBySlug(userData.role);
+        if (roleIdToSet) {
+          // Replace existing roles with the new one
+          await UserRole.destroy({ where: { user_id } });
+          await UserRole.create({ user_id, role_id: roleIdToSet });
+        } else {
+          this.logger.warn('Invalid role slug provided', { role: userData.role });
+        }
       }
 
       // Log activity
       await this.logUserActivity(user_id, 'user_updated', `User ${user.name} was updated`);
 
-      const updatedUser = await this.getUserById(user_id);
-      
+      // Fetch fresh user data with relations
+      const updatedUser = await User.findByPk(user_id, {
+        include: [
+          {
+            model: Role,
+            as: 'Roles',
+            through: { attributes: [] }
+          },
+          {
+            model: UserStatus,
+            as: 'UserStatus'
+          }
+        ]
+      });
+
+      if (!updatedUser) {
+        return {
+          success: false,
+          message: 'User not found after update'
+        };
+      }
+
+      // Derive role slug
+      let roleSlug = 'user';
+      try {
+        const anyUser: any = updatedUser;
+        if (anyUser.Roles && anyUser.Roles[0] && anyUser.Roles[0].slug) {
+          roleSlug = anyUser.Roles[0].slug;
+        }
+      } catch (err) {
+        this.logger.warn('Failed to determine role slug for update response', err);
+      }
+
+      // Derive status slug
+      const anyUser: any = updatedUser;
+      const statusSlug = anyUser.UserStatus && anyUser.UserStatus.slug ? anyUser.UserStatus.slug : 'active';
+
+      // Normalize phone
+      const phone = anyUser.phone_number ? (typeof anyUser.phone_number === 'number' ? `+${anyUser.phone_number}` : anyUser.phone_number) : null;
+
+      const responseData: FormattedUserResponseUpdated = {
+        id: anyUser.id,
+        name: anyUser.name,
+        email: anyUser.email,
+        phone: phone,
+        role: roleSlug,
+        status: statusSlug,
+        updatedAt: anyUser.updatedAt
+      };
+
       return {
         success: true,
-        message: 'User updated successfully',
-        data: updatedUser.data!
+        data: responseData
       };
 
     } catch (error) {
@@ -262,6 +524,50 @@ export class UserService implements UserServiceInterface {
       return {
         success: false,
         message: 'Failed to update user',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Update authenticated user's own profile
+   */
+  public async updateProfile(user_id: number, profileData: Partial<{ name: string; phone_number: string }>): Promise<ApiResponse<FormattedUserResponse>> {
+    try {
+      this.logger.info('Updating user profile', { user_id });
+
+      const user = await User.findByPk(user_id);
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found'
+        };
+      }
+
+      const allowedFields: Array<keyof typeof profileData> = ['name', 'phone_number'];
+      const dataToUpdate: any = {};
+      for (const key of allowedFields) {
+        if (profileData[key] !== undefined) {
+          dataToUpdate[key] = profileData[key as keyof typeof profileData];
+        }
+      }
+
+      await user.update(dataToUpdate);
+      await this.logUserActivity(user_id, 'profile_updated', `User ${user.name} updated own profile`);
+
+      const updatedUser = await this.getUserById(user_id);
+
+      return {
+        success: true,
+        message: 'Profile updated successfully',
+        data: updatedUser.data!
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to update profile', error);
+      return {
+        success: false,
+        message: 'Failed to update profile',
         error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
@@ -281,13 +587,6 @@ export class UserService implements UserServiceInterface {
           message: 'User not found'
         };
       }
-
-      // Delete user roles first
-      await UserRole.destroy({ where: { user_id: user_id } });
-
-      // Delete user activities
-      await UserActivity.destroy({ where: { user_id: user_id } });
-
       // Delete user
       await user.destroy();
 
@@ -303,6 +602,202 @@ export class UserService implements UserServiceInterface {
       return {
         success: false,
         message: 'Failed to delete user',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Request to delete authenticated users own profile
+   */
+  public async requestDeleteProfile(user_id: number): Promise<ApiResponse<{ expiresAt: Date }>> {
+    try {
+      this.logger.info('Requesting profile deletion', { user_id });
+
+      const user = await User.findByPk(user_id);
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found',
+          error: 'User not found'
+        };
+      }
+
+      const adminRole = await Role.findOne({ where: { slug: 'admin' } });
+      if (adminRole) {
+        const userHasAdminRole = await UserRole.findOne({
+          where: { 
+            user_id: user_id,
+            role_id: adminRole.id
+          }
+        });
+
+        if (userHasAdminRole) {
+          this.logger.warn('Admin attempted to request profile deletion', { user_id });
+          return {
+            success: false,
+            message: 'Admin users cannot delete their own accounts',
+            error: 'Admin cannot delete own account'
+          };
+        }
+      }
+
+      const deleteToken = crypto.randomBytes(5).toString('hex').toUpperCase();
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 24); // Token expires in 24 hours
+
+      let tokenType = await TokenType.findOne({ where: { slug: 'delete_account' } });
+      if (!tokenType) {
+        tokenType = await TokenType.create({
+          slug: 'delete_account',
+          description: 'Token para confirmar eliminación de cuenta'
+        });
+      }
+
+      await Token.destroy({
+        where: {
+          user_id: user_id,
+          token_type_id: tokenType.id
+        }
+      });
+
+      await Token.create({
+        user_id: user_id,
+        token_type_id: tokenType.id,
+        value: deleteToken
+      });
+
+      const appConfig = this.configService.getAppConfig();
+      
+      this.logger.info('Delete account token generated', {
+        user_id,
+        token: deleteToken,
+        expiresAt,
+        email: user.email,
+      });
+
+      try {
+        const emailService = (await import('./EmailService')).default;
+        await emailService.sendAccountDeletionRequestEmail(user.email, user.name, deleteToken, expiresAt);
+      } catch (error) {
+        this.logger.error('Failed to send deletion request email', error);
+      }
+
+      return {
+        success: true,
+        message: 'Profile deletion requested. Please check your email to confirm.',
+        data: {
+          expiresAt
+        }
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to request profile deletion', error);
+      return {
+        success: false,
+        message: 'Failed to request profile deletion',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Confirm and execute profile deletion with token, password and confirmation
+   */
+  public async confirmDeleteProfile(user_id: number, token: string, password: string, confirmation: string): Promise<ApiResponse<void>> {
+    try {
+      this.logger.info('Confirming profile deletion', { user_id });
+
+      // Verify confirmation word
+      if (confirmation !== 'DELETE') {
+        return {
+          success: false,
+          message: 'Confirmation must be "DELETE"',
+          error: 'Invalid confirmation'
+        };
+      }
+
+      const user = await User.findByPk(user_id);
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found',
+          error: 'User not found'
+        };
+      }
+
+      // Verify password
+      const isPasswordValid = await user.verifyPassword(password);
+      if (!isPasswordValid) {
+        return {
+          success: false,
+          message: 'Invalid password',
+          error: 'Invalid password'
+        };
+      }
+
+      const tokenType = await TokenType.findOne({ where: { slug: 'delete_account' } });
+      if (!tokenType) {
+        return {
+          success: false,
+          message: 'Invalid token',
+          error: 'Token type not found'
+        };
+      }
+
+      const storedToken = await Token.findOne({
+        where: {
+          user_id: user_id,
+          token_type_id: tokenType.id,
+          value: token
+        }
+      });
+
+      if (!storedToken) {
+        return {
+          success: false,
+          message: 'Invalid or expired token',
+          error: 'Invalid or expired token'
+        };
+      }
+
+      const tokenAge = Date.now() - storedToken.created_at.getTime();
+      const twentyFourHours = 24 * 60 * 60 * 1000;
+      
+      if (tokenAge > twentyFourHours) {
+        await storedToken.destroy();
+        return {
+          success: false,
+          message: 'The token has expired. Please request a new one.',
+          error: 'Token expired'
+        };
+      }
+
+      const userEmail = user.email;
+      const userName = user.name;
+
+      await storedToken.destroy();
+
+      const result = await this.deleteUser(user_id);
+      
+      if (result.success) {
+        this.logger.info('Profile deleted successfully after confirmation', { user_id, email: userEmail });
+        
+        try {
+          const emailService = (await import('./EmailService')).default;
+          await emailService.sendAccountDeletionEmail(userEmail, userName);
+        } catch (error) {
+          this.logger.error('Failed to send account deletion email', error);
+        }
+      }
+
+      return result;
+
+    } catch (error) {
+      this.logger.error('Failed to confirm profile deletion', error);
+      return {
+        success: false,
+        message: 'Failed to confirm profile deletion',
         error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
@@ -686,7 +1181,7 @@ export class UserService implements UserServiceInterface {
   /**
    * Toggle user status (active/inactive)
    */
-  public async toggleUserStatus(user_id: number): Promise<ApiResponse<User>> {
+  public async toggleUserStatus(user_id: number): Promise<ApiResponse<FormattedUserResponse>> {
     try {
       const user = await User.findByPk(user_id);
       if (!user) {
@@ -782,6 +1277,58 @@ export class UserService implements UserServiceInterface {
       };
     }
   }
+
+    /**
+   * Validate password strength
+   */
+  public validatePassword(password: string): { isValid: boolean; errors: string[] } {
+    const errors: string[] = [];
+
+    if (password.length < 8) {
+      errors.push('Password must be at least 8 characters long');
+    }
+
+    if (!/[A-Z]/.test(password)) {
+      errors.push('Password must contain at least one uppercase letter');
+    }
+
+    if (!/[a-z]/.test(password)) {
+      errors.push('Password must contain at least one lowercase letter');
+    }
+
+    if (!/\d/.test(password)) {
+      errors.push('Password must contain at least one number');
+    }
+
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      errors.push('Password must contain at least one special character');
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  }
+
+
+  /**
+   * Validate Role ID
+   */
+  private async getRoleIdBySlug(slug: string): Promise<number | null> {
+    try {
+        const role = await Role.findOne({ where: { slug } });
+        return role ? role.id : null;
+      } catch (error) {
+        this.logger.error('Failed to get role ID by slug', error);
+        return null;
+      }
+    }
+
+
+  
+
+  
+
 
 }
 
