@@ -266,6 +266,48 @@ router.get('/stats',
   userController.getUserStats
 );
 
+
+/**
+ * @swagger
+ * /api/users/profile:
+ *   get:
+ *     summary: Get authenticated user's profile
+  *   get:
+ *     summary: Get user by ID
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: number
+ *     responses:
+ *       200:
+ *         description: User retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/profile',
+  authMiddleware.authenticate,
+  validationMiddleware.validateParams(idParamSchema),
+  userController.getUserProfileAuth
+);
+
 /**
  * @swagger
  * /api/users/profile:

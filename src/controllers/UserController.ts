@@ -216,6 +216,42 @@ export class UserController {
     }
   };
 
+
+
+  /**
+ * Get authenticated user's profile
+   * @route **GET** `/api/users/profile`
+   */
+  public getUserProfileAuth = async (req: Request, res: Response): Promise<void> => {
+    try {
+
+      const authUser = (req as any).user;
+      const userId = authUser?.id;
+      this.logger.info('Get authenticated user profile request', { userId });
+    
+       if (!userId) {
+        res.status(401).json({ success: false, message: 'Unauthorized' });
+        return;
+      }
+     
+
+      const result = await this.userService.getUserById(userId);
+
+      if (result.success) {
+        res.status(200).json(result);
+      } else {
+        res.status(404).json(result);
+      }
+    } catch (error) {
+      this.logger.error('Get user by ID error', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: 'Failed to get user'
+      });
+    }
+  };
+
   /**
    * Update authenticated user's profile
    * @route PUT /api/users/profile
