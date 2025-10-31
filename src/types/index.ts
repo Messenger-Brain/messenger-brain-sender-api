@@ -234,6 +234,15 @@ export interface ContactsJobData {
   fetch_contacts_job_id?: number;
 }
 
+export interface ContactsData {
+  jid: string;
+  name: string;
+  notify: string;
+  verifiedName: string;
+  imgUrl: string;
+  status: string;
+}
+
 // Subscription interfaces
 export interface CreateSubscriptionRequest {
   slug: string;

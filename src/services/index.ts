@@ -14,3 +14,4 @@ export { WhatsAppContactsFetcherService } from './WhatsAppContactsFetcherService
 export { PuppeteerWhatsappContactsService } from './PuppeteerWhatsappContactsService'
 export { ContactsQueueService } from './ContactsQueueService'
 export { FetchContactsJobService } from './FetchContactsJobService'
+export { ContactsService } from './ContactsService'

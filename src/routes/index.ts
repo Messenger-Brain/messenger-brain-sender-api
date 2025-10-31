@@ -7,7 +7,7 @@ import subscriptionRoutes from './subscriptionRoutes';
 import sendMessageJobRoutes from './sendMessageJobRoutes';
 import userPreferenceRoutes from './userPreferenceRoutes';
 import fetchContactsJobRoutes from './fetchContactsJobRoutes';
-
+import contactsRoutes from './contactsRoutes' 
 const router = Router();
 
 // Mount all route modules
@@ -19,6 +19,7 @@ router.use('/subscriptions', subscriptionRoutes);
 router.use('/send-message-jobs', sendMessageJobRoutes);
 router.use('/fetch-contacts-jobs', fetchContactsJobRoutes);
 router.use('/user-preferences', userPreferenceRoutes);
+router.use('/contacts', contactsRoutes )
 
 /**
  * @swagger

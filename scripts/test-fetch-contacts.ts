@@ -4,6 +4,7 @@ import PuppeteerWhatsappContactsService from "../src/services/PuppeteerWhatsappC
 /**
  * Script to manually test the WhatsApp Puppeteer contact extraction
  * without running the full Messenger Brain API application.
+ *  =====  npx ts-node scripts/test-fetch-contacts.ts  =====
  */
 
 (async () => {
@@ -25,7 +26,9 @@ import PuppeteerWhatsappContactsService from "../src/services/PuppeteerWhatsappC
 
   // Llamar al servicio Puppeteer para extraer contactos
   const puppeteerService = new PuppeteerWhatsappContactsService();
-  const result = await puppeteerService.fetchContacts(browserContext);
+  // const result = await puppeteerService.fetchContacts(browserContext);
+  const result = await puppeteerService.fetchContactByPhoneNumber(browserContext,85144346);
+
 
   console.log("\n✅ RESULTADO FINAL:");
   console.log(result);
